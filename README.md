@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DJ Booking Manager - Web App
 
-## Getting Started
+## Setup local
 
-First, run the development server:
+### 1. Installer les dépendances
+
+```bash
+cd dj-booking
+npm install
+```
+
+### 2. Configurer Google OAuth
+
+1. Va sur [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Crée un projet (ou utilise un existant)
+3. **APIs & Services > Credentials > Create Credentials > OAuth Client ID**
+4. Type : **Web application**
+5. Authorized redirect URIs : `http://localhost:3000/api/auth/callback/google`
+6. Copie le Client ID et Client Secret
+
+### 3. Configurer le .env
+
+Modifie le fichier `.env` :
+
+```env
+DATABASE_URL="file:./dev.db"
+AUTH_SECRET="genere_avec_openssl_rand_base64_32"
+GOOGLE_CLIENT_ID="ton-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="ton-client-secret"
+```
+
+Pour générer AUTH_SECRET :
+```bash
+openssl rand -base64 32
+```
+
+### 4. Initialiser la base de données
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Lancer l'app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvre http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Fonctionnalités
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Login Google** : authentification sécurisée
+- **Dashboard** avec stats (dates à venir, fees total, contrats non signés, fees impayés)
+- **Vue Table** : toutes les dates avec infos complètes
+- **Vue Calendrier** : visualisation mensuelle
+- **Formulaire** : ajout/édition avec tous les champs (date, heure, promoter, venue, ville, pays, cachet, contrat, fees, transport, hotel, notes, statut)
+- **Filtres** : recherche texte + filtre par statut
+- **Theme sombre** adapté
 
-## Learn More
+## Structure du projet
 
-To learn more about Next.js, take a look at the following resources:
+```
+dj-booking/
+├── prisma/
+│   └── schema.prisma        # Modèles de données
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/route.ts  # Auth Google
+│   │   │   └── bookings/
+│   │   │       ├── route.ts                  # GET/POST bookings
+│   │   │       └── [id]/route.ts             # PUT/DELETE booking
+│   │   ├── login/page.tsx    # Page de connexion
+│   │   ├── layout.tsx        # Layout principal
+│   │   └── page.tsx          # Page d'accueil (dashboard)
+│   ├── components/
+│   │   ├── Dashboard.tsx     # Dashboard principal
+│   │   ├── BookingTable.tsx   # Vue table
+│   │   ├── BookingForm.tsx    # Formulaire ajout/édition
+│   │   ├── CalendarView.tsx   # Vue calendrier
+│   │   └── types.ts          # Types TypeScript
+│   └── lib/
+│       ├── auth.ts           # Config NextAuth
+│       └── prisma.ts         # Client Prisma
+└── .env                      # Variables d'environnement
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Déploiement
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Vercel (recommandé, gratuit)
 
-## Deploy on Vercel
+> Note : SQLite ne fonctionne pas sur Vercel (filesystem éphémère).
+> Pour la prod, migre vers **Turso** (SQLite hébergé, gratuit) ou **PostgreSQL** (Supabase/Neon, gratuit).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+#### Option Turso (SQLite cloud) :
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Crée un compte sur [turso.tech](https://turso.tech)
+2. `turso db create dj-booking`
+3. `turso db tokens create dj-booking`
+4. Mets à jour `.env` avec l'URL et le token Turso
+5. Deploy sur Vercel : `npx vercel`
+
+### VPS / Self-hosted
+
+SQLite fonctionne directement sur un VPS. Il suffit de :
+
+```bash
+npm run build
+npm start
+```
