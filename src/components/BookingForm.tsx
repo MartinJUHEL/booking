@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Booking, Promoter } from "./types";
+import { api } from "@/lib/api-client";
 
 interface VenueResult {
   label: string;
@@ -52,12 +53,9 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     if (!newPromoter.name) return;
     setCreatingPromoter(true);
     try {
-      const res = await fetch("/api/promoters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(artistId ? { ...newPromoter, artistId } : newPromoter),
-      });
-      const created: Promoter = await res.json();
+      const created = await api.post<Promoter>("/api/promoters", 
+        artistId ? { ...newPromoter, artistId } : newPromoter
+      );
       setForm((prev) => ({ ...prev, promoter: created.name, promoterId: created.id }));
       setShowNewPromoter(false);
       setPromoterMode("select");
@@ -101,8 +99,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     }
     setVenueLoading(true);
     try {
-      const res = await fetch(`/api/venues/search?q=${encodeURIComponent(query)}`);
-      const data: VenueResult[] = await res.json();
+      const data = await api.get<VenueResult[]>(`/api/venues/search?q=${encodeURIComponent(query)}`);
       setVenueResults(data);
       setShowVenueDropdown(data.length > 0);
     } catch {

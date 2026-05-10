@@ -7,6 +7,7 @@ import CalendarView from "./CalendarView";
 import PromoterList from "./PromoterList";
 import PromoterForm from "./PromoterForm";
 import type { Booking, Promoter } from "./types";
+import { api } from "@/lib/api-client";
 
 type ViewMode = "table" | "calendar" | "promoters";
 
@@ -61,23 +62,13 @@ export default function Dashboard({
 
   async function handleSave(data: Partial<Booking>) {
     if (editingBooking) {
-      const res = await fetch(`/api/bookings/${editingBooking.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const updated = await res.json();
+      const updated = await api.put<Booking>(`/api/bookings/${editingBooking.id}`, data);
       setBookings((prev) =>
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
     } else {
       const payload = artistId ? { ...data, artistId } : data;
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const created = await res.json();
+      const created = await api.post<Booking>("/api/bookings", payload);
       setBookings((prev) => [...prev, created].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       ));
@@ -88,7 +79,7 @@ export default function Dashboard({
 
   async function handleDelete(id: string) {
     if (!confirm("Supprimer cette date ?")) return;
-    await fetch(`/api/bookings/${id}`, { method: "DELETE" });
+    await api.delete(`/api/bookings/${id}`);
     setBookings((prev) => prev.filter((b) => b.id !== id));
   }
 
@@ -100,23 +91,13 @@ export default function Dashboard({
   // Promoter CRUD
   async function handleSavePromoter(data: Partial<Promoter>) {
     if (editingPromoter) {
-      const res = await fetch(`/api/promoters/${editingPromoter.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const updated = await res.json();
+      const updated = await api.put<Promoter>(`/api/promoters/${editingPromoter.id}`, data);
       setPromoters((prev) =>
         prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
       );
     } else {
       const payload = artistId ? { ...data, artistId } : data;
-      const res = await fetch("/api/promoters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const created = await res.json();
+      const created = await api.post<Promoter>("/api/promoters", payload);
       setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
     }
     setShowPromoterForm(false);
@@ -125,7 +106,7 @@ export default function Dashboard({
 
   async function handleDeletePromoter(id: string) {
     if (!confirm("Supprimer ce promoteur ? Les dates associées conserveront le nom du promoteur.")) return;
-    await fetch(`/api/promoters/${id}`, { method: "DELETE" });
+    await api.delete(`/api/promoters/${id}`);
     setPromoters((prev) => prev.filter((p) => p.id !== id));
   }
 

@@ -1,12 +1,26 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import SettingsClient from "./SettingsClient";
 
-export default async function SettingsPage() {
-  const session = await auth();
+export default function SettingsPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (!session?.user) {
-    redirect("/login");
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Chargement...</div>
+      </div>
+    );
   }
 
   return (
@@ -25,7 +39,7 @@ export default async function SettingsPage() {
               Retour au dashboard
             </a>
             <span className="text-sm text-gray-400">
-              {session.user.name || session.user.email}
+              {user.name || user.email}
             </span>
           </div>
         </div>

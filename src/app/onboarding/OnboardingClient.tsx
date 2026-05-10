@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 
 export default function OnboardingClient({ userName }: { userName: string }) {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const [role, setRole] = useState<"artist" | "booker" | null>(null);
   const [artistName, setArtistName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -13,15 +16,12 @@ export default function OnboardingClient({ userName }: { userName: string }) {
     if (!role) return;
     setSaving(true);
 
-    const res = await fetch("/api/user/role", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, artistName: artistName || undefined }),
-    });
-
-    if (res.ok) {
+    try {
+      await api.put("/api/user/role", { role, artistName: artistName || undefined });
+      await refreshUser();
       router.push("/");
-      router.refresh();
+    } catch (err) {
+      console.error(err);
     }
     setSaving(false);
   }

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { api } from "@/lib/api-client";
 
 interface Artist {
   id: string;
@@ -35,21 +36,14 @@ export default function ArtistSelector({
     setAdding(true);
     setError("");
 
-    const res = await fetch("/api/artists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    if (res.ok) {
-      const artist = await res.json();
+    try {
+      const artist = await api.post<{ id: string }>("/api/artists", { email });
       setShowAdd(false);
       setEmail("");
       router.push(`/?artistId=${artist.id}`);
       router.refresh();
-    } else {
-      const data = await res.json();
-      setError(data.error || "Erreur");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur");
     }
     setAdding(false);
   }

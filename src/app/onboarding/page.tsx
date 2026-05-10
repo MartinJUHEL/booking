@@ -1,24 +1,30 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import OnboardingClient from "./OnboardingClient";
 
-export default async function OnboardingPage() {
-  const session = await auth();
+export default function OnboardingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (!session?.user?.id) {
-    redirect("/login");
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+    if (!loading && user?.role) {
+      router.push("/");
+    }
+  }, [loading, user, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Chargement...</div>
+      </div>
+    );
   }
 
-  // If user already has a role, go to dashboard
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-
-  if (user?.role) {
-    redirect("/");
-  }
-
-  return <OnboardingClient userName={session.user.name || ""} />;
+  return <OnboardingClient userName={user.name || ""} />;
 }

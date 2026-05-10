@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api-client";
 
 interface CalendarOption {
   id: string;
@@ -26,11 +27,7 @@ export default function SettingsClient() {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load settings");
-        return r.json();
-      })
+    api.get<Settings>("/api/settings")
       .then((data) => {
         setSettings(data ?? { googleCalendarEnabled: false, googleCalendarId: null });
         setLoading(false);
@@ -44,17 +41,13 @@ export default function SettingsClient() {
 
   const loadCalendars = useCallback(async () => {
     setCalendarLoading(true);
-    const res = await fetch("/api/calendar/calendars");
-    if (res.ok) {
-      const data = await res.json();
+    try {
+      const data = await api.get<CalendarOption[]>("/api/calendar/calendars");
       setCalendars(data);
-    } else {
-      const err = await res.json();
+    } catch (err) {
       setMessage({
         type: "error",
-        text:
-          err.error ||
-          "Impossible de charger les calendriers. Vous devez vous reconnecter pour autoriser Google Calendar.",
+        text: "Impossible de charger les calendriers. Vous devez vous reconnecter pour autoriser Google Calendar.",
       });
     }
     setCalendarLoading(false);
@@ -87,14 +80,10 @@ export default function SettingsClient() {
   async function saveSettings(data: Partial<Settings>) {
     setSaving(true);
     setMessage(null);
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
+    try {
+      await api.put("/api/settings", data);
       setMessage({ type: "success", text: "Parametres sauvegardes" });
-    } else {
+    } catch {
       setMessage({ type: "error", text: "Erreur lors de la sauvegarde" });
     }
     setSaving(false);
@@ -104,14 +93,13 @@ export default function SettingsClient() {
   async function handleSyncAll() {
     setSyncing(true);
     setMessage(null);
-    const res = await fetch("/api/calendar/sync-all", { method: "POST" });
-    if (res.ok) {
-      const data = await res.json();
+    try {
+      const data = await api.post<{ synced: number }>("/api/calendar/sync-all");
       setMessage({
         type: "success",
         text: `${data.synced} date(s) synchronisee(s) avec Google Calendar`,
       });
-    } else {
+    } catch {
       setMessage({
         type: "error",
         text: "Erreur lors de la synchronisation",

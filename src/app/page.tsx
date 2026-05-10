@@ -1,131 +1,199 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
 import ArtistSelector from "@/components/ArtistSelector";
+import type { Booking, Promoter } from "@/components/types";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ artistId?: string }>;
-}) {
-  const session = await auth();
+interface Artist {
+  id: string;
+  name: string | null;
+  email: string;
+  artistName: string | null;
+}
 
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+interface PromoterWithCount extends Promoter {
+  bookingsCount?: number;
+  _count?: { bookings: number };
+}
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true, name: true, email: true, artistName: true },
-  });
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Chargement...</div></div>}>
+      <HomeContent />
+    </Suspense>
+  );
+}
 
-  // Redirect to onboarding if no role set
-  if (!user?.role) {
-    redirect("/onboarding");
-  }
+function HomeContent() {
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const params = await searchParams;
-  const isBooker = user.role === "booker";
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Determine the target artist
-  let targetUserId: string;
-  let artists: { id: string; name: string | null; email: string; artistName: string | null }[] = [];
-  let selectedArtistId: string | null = null;
+  // Add artist form state
+  const [addArtistEmail, setAddArtistEmail] = useState("");
+  const [addingArtist, setAddingArtist] = useState(false);
 
-  if (isBooker) {
-    // Load managed artists
-    const relations = await prisma.bookerArtist.findMany({
-      where: { bookerId: session.user.id },
-      include: {
-        artist: { select: { id: true, name: true, email: true, artistName: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-    artists = relations.map((r) => r.artist);
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+    if (!loading && user && !user.role) {
+      router.push("/onboarding");
+    }
+  }, [loading, user, router]);
 
-    if (artists.length === 0) {
-      // No artists yet — show empty state
-      return (
-        <div className="min-h-screen">
-          <Header userName={user.name || user.email} role="booker" />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-            <AddArtistEmptyState />
-          </main>
-        </div>
-      );
+  const isBooker = user?.role === "booker";
+
+  // Load data
+  useEffect(() => {
+    if (!user || !user.role) return;
+
+    async function loadData() {
+      setDataLoading(true);
+      try {
+        if (isBooker) {
+          const artistsData = await api.get<Artist[]>("/api/artists");
+          setArtists(artistsData);
+
+          const paramArtistId = searchParams.get("artistId");
+          const targetId = paramArtistId && artistsData.some(a => a.id === paramArtistId)
+            ? paramArtistId
+            : artistsData[0]?.id || null;
+          setSelectedArtistId(targetId);
+
+          if (targetId) {
+            const [b, p] = await Promise.all([
+              api.get<Booking[]>(`/api/bookings?artistId=${targetId}`),
+              api.get<PromoterWithCount[]>(`/api/promoters?artistId=${targetId}`),
+            ]);
+            setBookings(b);
+            // Map bookingsCount to _count for compatibility
+            setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
+          }
+        } else {
+          const [b, p] = await Promise.all([
+            api.get<Booking[]>("/api/bookings"),
+            api.get<PromoterWithCount[]>("/api/promoters"),
+          ]);
+          setBookings(b);
+          setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
+        }
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        setDataLoading(false);
+      }
     }
 
-    // Use selected artist or default to first
-    selectedArtistId = params.artistId && artists.some((a) => a.id === params.artistId)
-      ? params.artistId!
-      : artists[0].id;
-    targetUserId = selectedArtistId;
-  } else {
-    // Artist sees their own data
-    targetUserId = session.user.id;
+    loadData();
+  }, [user, isBooker, searchParams]);
+
+  // Reload when artist changes
+  useEffect(() => {
+    if (!isBooker || !selectedArtistId || !user) return;
+
+    async function loadArtistData() {
+      try {
+        const [b, p] = await Promise.all([
+          api.get<Booking[]>(`/api/bookings?artistId=${selectedArtistId}`),
+          api.get<PromoterWithCount[]>(`/api/promoters?artistId=${selectedArtistId}`),
+        ]);
+        setBookings(b);
+        setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
+      } catch (err) {
+        console.error("Failed to load artist data:", err);
+      }
+    }
+
+    loadArtistData();
+  }, [selectedArtistId, isBooker, user]);
+
+  async function handleAddArtist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addArtistEmail) return;
+    setAddingArtist(true);
+    try {
+      const artist = await api.post<Artist>("/api/artists", { email: addArtistEmail });
+      setArtists(prev => [...prev, artist]);
+      setSelectedArtistId(artist.id);
+      setAddArtistEmail("");
+      router.push(`/?artistId=${artist.id}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAddingArtist(false);
+    }
   }
 
-  const [bookings, promoters] = await Promise.all([
-    prisma.booking.findMany({
-      where: { userId: targetUserId },
-      orderBy: { date: "asc" },
-      include: { user: { select: { name: true, email: true } } },
-    }),
-    prisma.promoter.findMany({
-      where: { userId: targetUserId },
-      orderBy: { name: "asc" },
-      include: { _count: { select: { bookings: true } } },
-    }),
-  ]);
+  if (loading || !user || !user.role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Chargement...</div>
+      </div>
+    );
+  }
 
-  const selectedArtist = isBooker
-    ? artists.find((a) => a.id === selectedArtistId)
-    : null;
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen">
+        <HeaderBar user={user} isBooker={isBooker} artists={artists} selectedArtistId={selectedArtistId} onLogout={logout} />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-gray-400">Chargement des donnees...</div>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <div className="min-h-screen">
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🎧</span>
-            <h1 className="text-xl font-bold">DJ Booking Manager</h1>
-            {isBooker && (
-              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-medium">
-                Booker
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            {isBooker && artists.length > 0 && (
-              <ArtistSelector
-                artists={artists.map((a) => ({
-                  id: a.id,
-                  label: a.artistName || a.name || a.email,
-                }))}
-                selectedId={selectedArtistId!}
+  // Booker with no artists
+  if (isBooker && artists.length === 0) {
+    return (
+      <div className="min-h-screen">
+        <HeaderBar user={user} isBooker={isBooker} artists={[]} selectedArtistId={null} onLogout={logout} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div className="text-center py-20">
+            <div className="text-5xl mb-4">🎵</div>
+            <h2 className="text-xl font-bold mb-2">Aucun artiste</h2>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto">
+              Ajoutez un artiste pour commencer a gerer ses bookings. L&apos;artiste doit avoir un compte sur la plateforme.
+            </p>
+            <form onSubmit={handleAddArtist} className="flex gap-2 max-w-md mx-auto">
+              <input
+                type="email"
+                value={addArtistEmail}
+                onChange={(e) => setAddArtistEmail(e.target.value)}
+                placeholder="Email de l'artiste"
+                required
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
               />
-            )}
-            <a
-              href="/settings"
-              className="text-sm text-gray-400 hover:text-purple-400 transition-colors"
-            >
-              Configuration
-            </a>
-            <span className="text-sm text-gray-400">
-              {user.name || user.email}
-            </span>
-            <form action="/api/auth/signout" method="POST">
               <button
                 type="submit"
-                className="text-sm text-gray-400 hover:text-white transition-colors"
+                disabled={addingArtist}
+                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
               >
-                Deconnexion
+                {addingArtist ? "..." : "Ajouter"}
               </button>
             </form>
           </div>
-        </div>
-      </header>
+        </main>
+      </div>
+    );
+  }
+
+  const selectedArtist = isBooker ? artists.find(a => a.id === selectedArtistId) : null;
+
+  return (
+    <div className="min-h-screen">
+      <HeaderBar user={user} isBooker={isBooker} artists={artists} selectedArtistId={selectedArtistId} onLogout={logout} />
 
       {isBooker && selectedArtist && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4">
@@ -137,8 +205,8 @@ export default async function Home({
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Dashboard
-          initialBookings={JSON.parse(JSON.stringify(bookings))}
-          initialPromoters={JSON.parse(JSON.stringify(promoters))}
+          initialBookings={bookings}
+          initialPromoters={promoters}
           role={user.role as "artist" | "booker"}
           artistId={isBooker ? selectedArtistId! : undefined}
         />
@@ -147,101 +215,53 @@ export default async function Home({
   );
 }
 
-function Header({ userName, role }: { userName: string; role: string }) {
+function HeaderBar({
+  user,
+  isBooker,
+  artists,
+  selectedArtistId,
+  onLogout,
+}: {
+  user: { name: string | null; email: string; role: string | null };
+  isBooker: boolean;
+  artists: Artist[];
+  selectedArtistId: string | null;
+  onLogout: () => void;
+}) {
   return (
     <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🎧</span>
           <h1 className="text-xl font-bold">DJ Booking Manager</h1>
-          {role === "booker" && (
+          {isBooker && (
             <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-medium">
               Booker
             </span>
           )}
         </div>
         <div className="flex items-center gap-4">
-          <a
-            href="/settings"
-            className="text-sm text-gray-400 hover:text-purple-400 transition-colors"
-          >
+          {isBooker && artists.length > 0 && selectedArtistId && (
+            <ArtistSelector
+              artists={artists.map(a => ({
+                id: a.id,
+                label: a.artistName || a.name || a.email,
+              }))}
+              selectedId={selectedArtistId}
+            />
+          )}
+          <a href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
             Configuration
           </a>
-          <span className="text-sm text-gray-400">{userName}</span>
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              Deconnexion
-            </button>
-          </form>
+          <span className="text-sm text-gray-400">{user.name || user.email}</span>
+          <button
+            onClick={onLogout}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Deconnexion
+          </button>
         </div>
       </div>
     </header>
-  );
-}
-
-function AddArtistEmptyState() {
-  return (
-    <div className="text-center py-20">
-      <div className="text-5xl mb-4">🎵</div>
-      <h2 className="text-xl font-bold mb-2">Aucun artiste</h2>
-      <p className="text-gray-400 mb-8 max-w-md mx-auto">
-        Ajoutez un artiste pour commencer a gerer ses bookings. L&apos;artiste doit avoir un compte sur la plateforme.
-      </p>
-      <AddArtistForm />
-    </div>
-  );
-}
-
-function AddArtistForm() {
-  return (
-    <form
-      action={async (formData: FormData) => {
-        "use server";
-        const email = formData.get("email") as string;
-        if (!email) return;
-        
-        const session = await auth();
-        if (!session?.user?.id) return;
-
-        const artist = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true, role: true },
-        });
-
-        if (!artist || artist.role !== "artist") return;
-
-        await prisma.bookerArtist.upsert({
-          where: {
-            bookerId_artistId: {
-              bookerId: session.user.id,
-              artistId: artist.id,
-            },
-          },
-          create: { bookerId: session.user.id, artistId: artist.id },
-          update: {},
-        });
-
-        const { redirect } = await import("next/navigation");
-        redirect(`/?artistId=${artist.id}`);
-      }}
-      className="flex gap-2 max-w-md mx-auto"
-    >
-      <input
-        type="email"
-        name="email"
-        placeholder="Email de l'artiste"
-        required
-        className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-      />
-      <button
-        type="submit"
-        className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-      >
-        Ajouter
-      </button>
-    </form>
   );
 }
