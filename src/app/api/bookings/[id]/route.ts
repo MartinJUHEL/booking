@@ -25,6 +25,7 @@ export async function PUT(
       date: body.date ? new Date(body.date) : undefined,
       time: body.time,
       promoter: body.promoter,
+      promoterId: body.promoterId !== undefined ? (body.promoterId || null) : undefined,
       venue: body.venue,
       city: body.city,
       country: body.country,

@@ -22,6 +22,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   bookings      Booking[]
+  promoters     Promoter[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -61,11 +62,35 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Promoter {
+  id              String   @id @default(cuid())
+  name            String           // Nom du contact
+  email           String?
+  phone           String?
+  company         String?          // Nom de la structure
+  headquarters    String?          // Siège social
+  siret           String?          // SIRET
+  ape             String?          // Code APE
+  vatNumber       String?          // Numéro de TVA
+  signatory       String?          // Signataire
+  signatoryRole   String?          // Qualité du signataire
+  notes           String?
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model Booking {
   id              String   @id @default(cuid())
   date            DateTime
   time            String?  // "23:00"
   promoter        String
+  promoterId      String?
+  promoterRel     Promoter? @relation(fields: [promoterId], references: [id], onDelete: SetNull)
   venue           String
   city            String
   country         String

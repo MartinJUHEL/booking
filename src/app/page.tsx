@@ -10,10 +10,17 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const bookings = await prisma.booking.findMany({
-    orderBy: { date: "asc" },
-    include: { user: { select: { name: true, email: true } } },
-  });
+  const [bookings, promoters] = await Promise.all([
+    prisma.booking.findMany({
+      orderBy: { date: "asc" },
+      include: { user: { select: { name: true, email: true } } },
+    }),
+    prisma.promoter.findMany({
+      where: { userId: session.user.id },
+      orderBy: { name: "asc" },
+      include: { _count: { select: { bookings: true } } },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -44,7 +51,10 @@ export default async function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Dashboard initialBookings={JSON.parse(JSON.stringify(bookings))} />
+        <Dashboard
+          initialBookings={JSON.parse(JSON.stringify(bookings))}
+          initialPromoters={JSON.parse(JSON.stringify(promoters))}
+        />
       </main>
     </div>
   );

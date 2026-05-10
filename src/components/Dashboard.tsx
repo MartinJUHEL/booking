@@ -4,19 +4,30 @@ import { useState, useMemo } from "react";
 import BookingTable from "./BookingTable";
 import BookingForm from "./BookingForm";
 import CalendarView from "./CalendarView";
-import type { Booking } from "./types";
+import PromoterList from "./PromoterList";
+import PromoterForm from "./PromoterForm";
+import type { Booking, Promoter } from "./types";
 
-type ViewMode = "table" | "calendar";
+type ViewMode = "table" | "calendar" | "promoters";
+
+interface PromoterWithCount extends Promoter {
+  _count?: { bookings: number };
+}
 
 export default function Dashboard({
   initialBookings,
+  initialPromoters,
 }: {
   initialBookings: Booking[];
+  initialPromoters: PromoterWithCount[];
 }) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [promoters, setPromoters] = useState<PromoterWithCount[]>(initialPromoters);
   const [view, setView] = useState<ViewMode>("table");
   const [showForm, setShowForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [showPromoterForm, setShowPromoterForm] = useState(false);
+  const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -81,6 +92,42 @@ export default function Dashboard({
     setShowForm(true);
   }
 
+  // Promoter CRUD
+  async function handleSavePromoter(data: Partial<Promoter>) {
+    if (editingPromoter) {
+      const res = await fetch(`/api/promoters/${editingPromoter.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const updated = await res.json();
+      setPromoters((prev) =>
+        prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+      );
+    } else {
+      const res = await fetch("/api/promoters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const created = await res.json();
+      setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+    setShowPromoterForm(false);
+    setEditingPromoter(null);
+  }
+
+  async function handleDeletePromoter(id: string) {
+    if (!confirm("Supprimer ce promoteur ? Les dates associées conserveront le nom du promoteur.")) return;
+    await fetch(`/api/promoters/${id}`, { method: "DELETE" });
+    setPromoters((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function handleEditPromoter(promoter: Promoter) {
+    setEditingPromoter(promoter);
+    setShowPromoterForm(true);
+  }
+
   return (
     <div>
       {/* Stats */}
@@ -104,23 +151,27 @@ export default function Dashboard({
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <input
-          type="text"
-          placeholder="Rechercher..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm flex-1 focus:outline-none focus:border-purple-500"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-        >
-          <option value="all">Tous les statuts</option>
-          <option value="pending">En attente</option>
-          <option value="confirmed">Confirmé</option>
-          <option value="cancelled">Annulé</option>
-        </select>
+        {view !== "promoters" && (
+          <>
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm flex-1 focus:outline-none focus:border-purple-500"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="pending">En attente</option>
+              <option value="confirmed">Confirmé</option>
+              <option value="cancelled">Annulé</option>
+            </select>
+          </>
+        )}
         <div className="flex gap-2">
           <button
             onClick={() => setView("table")}
@@ -142,16 +193,38 @@ export default function Dashboard({
           >
             Calendrier
           </button>
+          <button
+            onClick={() => setView("promoters")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              view === "promoters"
+                ? "bg-purple-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}
+          >
+            Promoteurs
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setEditingBooking(null);
-            setShowForm(true);
-          }}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-        >
-          + Nouvelle date
-        </button>
+        {view === "promoters" ? (
+          <button
+            onClick={() => {
+              setEditingPromoter(null);
+              setShowPromoterForm(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+          >
+            + Nouveau promoteur
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setEditingBooking(null);
+              setShowForm(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+          >
+            + Nouvelle date
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -161,18 +234,40 @@ export default function Dashboard({
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
-      ) : (
+      ) : view === "calendar" ? (
         <CalendarView bookings={filtered} onEdit={handleEdit} />
+      ) : (
+        <PromoterList
+          promoters={promoters}
+          onEdit={handleEditPromoter}
+          onDelete={handleDeletePromoter}
+        />
       )}
 
-      {/* Modal */}
+      {/* Booking Modal */}
       {showForm && (
         <BookingForm
           booking={editingBooking}
+          promoters={promoters}
           onSave={handleSave}
           onClose={() => {
             setShowForm(false);
             setEditingBooking(null);
+          }}
+          onPromoterCreated={(p) => {
+            setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
+          }}
+        />
+      )}
+
+      {/* Promoter Modal */}
+      {showPromoterForm && (
+        <PromoterForm
+          promoter={editingPromoter}
+          onSave={handleSavePromoter}
+          onClose={() => {
+            setShowPromoterForm(false);
+            setEditingPromoter(null);
           }}
         />
       )}

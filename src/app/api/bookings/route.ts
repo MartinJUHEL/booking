@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       date: new Date(body.date),
       time: body.time || null,
       promoter: body.promoter,
+      promoterId: body.promoterId || null,
       venue: body.venue,
       city: body.city,
       country: body.country,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { Booking } from "./types";
+import type { Booking, Promoter } from "./types";
 
 interface VenueResult {
   label: string;
@@ -12,15 +12,18 @@ interface VenueResult {
 
 interface Props {
   booking: Booking | null;
+  promoters: Promoter[];
   onSave: (data: Partial<Booking>) => void;
   onClose: () => void;
+  onPromoterCreated?: (promoter: Promoter) => void;
 }
 
-export default function BookingForm({ booking, onSave, onClose }: Props) {
+export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated }: Props) {
   const [form, setForm] = useState({
     date: booking?.date ? new Date(booking.date).toISOString().split("T")[0] : "",
     time: booking?.time || "",
     promoter: booking?.promoter || "",
+    promoterId: booking?.promoterId || "",
     venue: booking?.venue || "",
     city: booking?.city || "",
     country: booking?.country || "",
@@ -36,9 +39,50 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
     status: booking?.status || "pending",
   });
 
+  const [promoterMode, setPromoterMode] = useState<"select" | "new">(
+    booking?.promoterId ? "select" : promoters.length > 0 ? "select" : "new"
+  );
+
+  const [showNewPromoter, setShowNewPromoter] = useState(false);
+  const [creatingPromoter, setCreatingPromoter] = useState(false);
+  const [newPromoter, setNewPromoter] = useState({ name: "", company: "", email: "", phone: "" });
+
+  async function handleCreatePromoter() {
+    if (!newPromoter.name) return;
+    setCreatingPromoter(true);
+    try {
+      const res = await fetch("/api/promoters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPromoter),
+      });
+      const created: Promoter = await res.json();
+      setForm((prev) => ({ ...prev, promoter: created.name, promoterId: created.id }));
+      setShowNewPromoter(false);
+      setPromoterMode("select");
+      setNewPromoter({ name: "", company: "", email: "", phone: "" });
+      onPromoterCreated?.(created);
+    } finally {
+      setCreatingPromoter(false);
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave({ ...form, fee: parseFloat(form.fee) || 0 } as Partial<Booking>);
+    const data = { ...form, fee: parseFloat(form.fee) || 0 };
+    if (promoterMode === "new") {
+      data.promoterId = "";
+    }
+    onSave(data as Partial<Booking>);
+  }
+
+  function selectPromoter(id: string) {
+    const p = promoters.find((p) => p.id === id);
+    if (p) {
+      setForm((prev) => ({ ...prev, promoter: p.name, promoterId: p.id }));
+    } else {
+      setForm((prev) => ({ ...prev, promoter: "", promoterId: "" }));
+    }
   }
 
   // Venue autocomplete
@@ -136,9 +180,118 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
             </Field>
           </div>
 
-          {/* Venue info */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Promoter *">
+          {/* Promoter */}
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-sm text-gray-400">Promoteur *</span>
+              <div className="flex gap-1">
+                {promoters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPromoterMode("select")}
+                    className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                      promoterMode === "select"
+                        ? "bg-purple-600 text-white"
+                        : "bg-gray-800 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Liste
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPromoterMode("new");
+                    setForm((prev) => ({ ...prev, promoterId: "" }));
+                    setShowNewPromoter(false);
+                  }}
+                  className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                    promoterMode === "new" && !showNewPromoter
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Saisie libre
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPromoterMode("new");
+                    setShowNewPromoter(true);
+                  }}
+                  className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                    showNewPromoter
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  + Créer
+                </button>
+              </div>
+            </div>
+            {promoterMode === "select" && promoters.length > 0 ? (
+              <select
+                required
+                value={form.promoterId}
+                onChange={(e) => selectPromoter(e.target.value)}
+                className="input"
+              >
+                <option value="">-- Choisir un promoteur --</option>
+                {promoters.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}{p.company ? ` (${p.company})` : ""}
+                  </option>
+                ))}
+              </select>
+            ) : showNewPromoter ? (
+              <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Nom *">
+                    <input
+                      value={newPromoter.name}
+                      onChange={(e) => setNewPromoter((p) => ({ ...p, name: e.target.value }))}
+                      className="input"
+                      placeholder="Live Nation..."
+                    />
+                  </Field>
+                  <Field label="Société">
+                    <input
+                      value={newPromoter.company}
+                      onChange={(e) => setNewPromoter((p) => ({ ...p, company: e.target.value }))}
+                      className="input"
+                      placeholder="Nom de la société"
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Email">
+                    <input
+                      type="email"
+                      value={newPromoter.email}
+                      onChange={(e) => setNewPromoter((p) => ({ ...p, email: e.target.value }))}
+                      className="input"
+                      placeholder="contact@promoteur.com"
+                    />
+                  </Field>
+                  <Field label="Téléphone">
+                    <input
+                      value={newPromoter.phone}
+                      onChange={(e) => setNewPromoter((p) => ({ ...p, phone: e.target.value }))}
+                      className="input"
+                      placeholder="+33 6 12 34 56 78"
+                    />
+                  </Field>
+                </div>
+                <button
+                  type="button"
+                  disabled={!newPromoter.name || creatingPromoter}
+                  onClick={handleCreatePromoter}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors"
+                >
+                  {creatingPromoter ? "Création..." : "Créer le promoteur"}
+                </button>
+              </div>
+            ) : (
               <input
                 required
                 value={form.promoter}
@@ -146,7 +299,11 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
                 className="input"
                 placeholder="Live Nation, Elrow..."
               />
-            </Field>
+            )}
+          </div>
+
+          {/* Venue */}
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Venue *">
               <div ref={venueWrapperRef} className="relative">
                 <input
@@ -183,9 +340,18 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
                 )}
               </div>
             </Field>
+            <Field label="Cachet (€)">
+              <input
+                type="number"
+                value={form.fee}
+                onChange={(e) => set("fee", e.target.value)}
+                className="input"
+                placeholder="0"
+              />
+            </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Ville *">
               <input
                 required
@@ -202,15 +368,6 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
                 onChange={(e) => set("country", e.target.value)}
                 className="input"
                 placeholder="France"
-              />
-            </Field>
-            <Field label="Cachet (€)">
-              <input
-                type="number"
-                value={form.fee}
-                onChange={(e) => set("fee", e.target.value)}
-                className="input"
-                placeholder="0"
               />
             </Field>
           </div>

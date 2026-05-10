@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function makePrisma() {
-  const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+  const dbPath = path.join(process.cwd(), "dev.db");
   const adapter = new PrismaLibSql({
     url: `file:${dbPath}`,
   });
