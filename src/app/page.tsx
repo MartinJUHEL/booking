@@ -24,6 +24,12 @@ export default async function Home() {
             <h1 className="text-xl font-bold">DJ Booking Manager</h1>
           </div>
           <div className="flex items-center gap-4">
+            <a
+              href="/settings"
+              className="text-sm text-gray-400 hover:text-purple-400 transition-colors"
+            >
+              Configuration
+            </a>
             <span className="text-sm text-gray-400">{session.user.name || session.user.email}</span>
             <form action="/api/auth/signout" method="POST">
               <button

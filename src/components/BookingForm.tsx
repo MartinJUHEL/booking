@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { Booking } from "./types";
+
+interface VenueResult {
+  label: string;
+  name: string;
+  city: string;
+  country: string;
+}
 
 interface Props {
   booking: Booking | null;
@@ -33,6 +40,60 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
     e.preventDefault();
     onSave({ ...form, fee: parseFloat(form.fee) || 0 } as Partial<Booking>);
   }
+
+  // Venue autocomplete
+  const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+  const [venueLoading, setVenueLoading] = useState(false);
+  const venueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const venueWrapperRef = useRef<HTMLDivElement>(null);
+
+  const searchVenue = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setVenueResults([]);
+      setShowVenueDropdown(false);
+      return;
+    }
+    setVenueLoading(true);
+    try {
+      const res = await fetch(`/api/venues/search?q=${encodeURIComponent(query)}`);
+      const data: VenueResult[] = await res.json();
+      setVenueResults(data);
+      setShowVenueDropdown(data.length > 0);
+    } catch {
+      setVenueResults([]);
+    } finally {
+      setVenueLoading(false);
+    }
+  }, []);
+
+  function handleVenueChange(value: string) {
+    set("venue", value);
+    if (venueTimerRef.current) clearTimeout(venueTimerRef.current);
+    venueTimerRef.current = setTimeout(() => searchVenue(value), 350);
+  }
+
+  function selectVenue(result: VenueResult) {
+    setForm((prev) => ({
+      ...prev,
+      venue: result.name,
+      city: result.city || prev.city,
+      country: result.country || prev.country,
+    }));
+    setShowVenueDropdown(false);
+    setVenueResults([]);
+  }
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (venueWrapperRef.current && !venueWrapperRef.current.contains(e.target as Node)) {
+        setShowVenueDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -87,13 +148,40 @@ export default function BookingForm({ booking, onSave, onClose }: Props) {
               />
             </Field>
             <Field label="Venue *">
-              <input
-                required
-                value={form.venue}
-                onChange={(e) => set("venue", e.target.value)}
-                className="input"
-                placeholder="Rex Club, Amnesia..."
-              />
+              <div ref={venueWrapperRef} className="relative">
+                <input
+                  required
+                  value={form.venue}
+                  onChange={(e) => handleVenueChange(e.target.value)}
+                  onFocus={() => venueResults.length > 0 && setShowVenueDropdown(true)}
+                  className="input"
+                  placeholder="Rex Club, Amnesia..."
+                  autoComplete="off"
+                />
+                {venueLoading && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">...</span>
+                )}
+                {showVenueDropdown && (
+                  <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+                    {venueResults.map((r, i) => (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          onClick={() => selectVenue(r)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors"
+                        >
+                          <span className="text-white">{r.name}</span>
+                          {(r.city || r.country) && (
+                            <span className="text-gray-400 ml-2 text-xs">
+                              {[r.city, r.country].filter(Boolean).join(", ")}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </Field>
           </div>
 

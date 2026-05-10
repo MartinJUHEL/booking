@@ -1,6 +1,11 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  syncBookingToCalendar,
+  deleteBookingFromCalendar,
+} from "@/lib/google-calendar";
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 export async function PUT(
   req: NextRequest,
@@ -36,6 +41,26 @@ export async function PUT(
     },
   });
 
+  // Sync to Google Calendar
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const appBaseUrl = `${protocol}://${host}`;
+
+  const eventId = await syncBookingToCalendar(
+    session.user.id,
+    booking,
+    appBaseUrl
+  );
+
+  if (eventId && eventId !== booking.googleCalendarEventId) {
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { googleCalendarEventId: eventId },
+    });
+    return NextResponse.json(updated);
+  }
+
   return NextResponse.json(booking);
 }
 
@@ -49,6 +74,16 @@ export async function DELETE(
   }
 
   const { id } = await ctx.params;
+
+  // Get booking first for calendar cleanup
+  const booking = await prisma.booking.findUnique({ where: { id } });
+
+  if (booking?.googleCalendarEventId) {
+    await deleteBookingFromCalendar(
+      session.user.id,
+      booking.googleCalendarEventId
+    );
+  }
 
   await prisma.booking.delete({ where: { id } });
 

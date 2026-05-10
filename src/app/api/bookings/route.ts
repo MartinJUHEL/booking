@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { syncBookingToCalendar } from "@/lib/google-calendar";
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 export async function GET() {
   const session = await auth();
@@ -45,6 +47,26 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
     },
   });
+
+  // Sync to Google Calendar
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const appBaseUrl = `${protocol}://${host}`;
+
+  const eventId = await syncBookingToCalendar(
+    session.user.id,
+    booking,
+    appBaseUrl
+  );
+
+  if (eventId) {
+    const updated = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { googleCalendarEventId: eventId },
+    });
+    return NextResponse.json(updated, { status: 201 });
+  }
 
   return NextResponse.json(booking, { status: 201 });
 }
