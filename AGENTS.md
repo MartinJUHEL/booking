@@ -50,9 +50,45 @@ src/lib/venue-providers/
 
 `GET /api/venues/search?q=...` → délègue au provider configuré, retourne `VenueResult[]`
 
+## Promoteurs
+
+Onglet dédié à la gestion des promoteurs avec leurs informations de facturation. Les promoteurs peuvent être sélectionnés lors de la création d'une date.
+
+### Modèle Promoter
+
+| Champ | Description |
+|-------|-------------|
+| `name` | Nom du contact |
+| `email` / `phone` | Coordonnées |
+| `company` | Nom de la structure |
+| `headquarters` | Siège social |
+| `siret` | Numéro SIRET |
+| `ape` | Code APE |
+| `vatNumber` | Numéro de TVA intracommunautaire |
+| `signatory` | Nom du signataire |
+| `signatoryRole` | Qualité du signataire (Gérant, Président...) |
+
+### Lien avec les bookings
+
+- `Booking.promoterId` (FK optionnelle vers `Promoter`)
+- Le champ `Booking.promoter` (string) est conservé pour la saisie libre
+- Dans le formulaire de booking, 3 modes : **Liste** (sélection existant), **Saisie libre**, **+ Créer** (création inline)
+
+### API Routes
+
+- `GET/POST /api/promoters` — Liste et création
+- `PUT/DELETE /api/promoters/[id]` — Modification et suppression
+
+### Composants
+
+- `src/components/PromoterList.tsx` — Affichage en grille de cartes
+- `src/components/PromoterForm.tsx` — Modal de création/édition
+
 ## Key files
 
-- `src/components/BookingForm.tsx` — Formulaire de booking avec autocomplétion venue
+- `src/components/BookingForm.tsx` — Formulaire de booking avec autocomplétion venue et sélection promoteur
+- `src/components/Dashboard.tsx` — Dashboard avec onglets Table / Calendrier / Promoteurs
 - `src/app/api/bookings/route.ts` — CRUD bookings
+- `src/app/api/promoters/route.ts` — CRUD promoteurs
 - `src/lib/google-calendar.ts` — Sync Google Calendar
 - `prisma/schema.prisma` — Schéma DB
