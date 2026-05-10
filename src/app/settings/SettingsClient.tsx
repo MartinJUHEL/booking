@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api-client";
+
 
 interface CalendarOption {
   id: string;
@@ -20,11 +21,28 @@ export default function SettingsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const gsiLoaded = useRef(false);
+
+  // Load GSI script
+  useEffect(() => {
+    if (gsiLoaded.current) return;
+    if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+      gsiLoaded.current = true;
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => { gsiLoaded.current = true; };
+    document.head.appendChild(script);
+  }, []);
 
   useEffect(() => {
     api.get<Settings>("/api/settings")
@@ -39,18 +57,19 @@ export default function SettingsClient() {
       });
   }, []);
 
-  const loadCalendars = useCallback(async () => {
+  const loadCalendars = useCallback(async (): Promise<boolean> => {
     setCalendarLoading(true);
     try {
       const data = await api.get<CalendarOption[]>("/api/calendar/calendars");
       setCalendars(data);
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: "Impossible de charger les calendriers. Vous devez vous reconnecter pour autoriser Google Calendar.",
-      });
+      setCalendarConnected(true);
+      setCalendarLoading(false);
+      return true;
+    } catch {
+      setCalendarConnected(false);
+      setCalendarLoading(false);
+      return false;
     }
-    setCalendarLoading(false);
   }, []);
 
   useEffect(() => {
@@ -59,10 +78,52 @@ export default function SettingsClient() {
     }
   }, [settings?.googleCalendarEnabled, loadCalendars]);
 
+  function connectGoogleCalendar() {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId || !window.google) {
+      setMessage({ type: "error", text: "Google Identity Services non disponible" });
+      return;
+    }
+
+    setConnecting(true);
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: clientId,
+      scope: "https://www.googleapis.com/auth/calendar",
+      ux_mode: "popup",
+      callback: async (response) => {
+        if (response.error || !response.code) {
+          setConnecting(false);
+          setMessage({ type: "error", text: "Autorisation Google Calendar refusee" });
+          return;
+        }
+
+        try {
+          await api.post("/api/auth/google-code", { code: response.code });
+          setCalendarConnected(true);
+          const loaded = await loadCalendars();
+          if (loaded) {
+            await saveSettings({ googleCalendarEnabled: true });
+            setSettings((prev) => prev ? { ...prev, googleCalendarEnabled: true } : prev);
+            setMessage({ type: "success", text: "Google Calendar connecte !" });
+          }
+        } catch {
+          setMessage({ type: "error", text: "Erreur lors de la connexion a Google Calendar" });
+        }
+        setConnecting(false);
+      },
+    });
+    client.requestCode();
+  }
+
   async function handleToggle(enabled: boolean) {
     if (enabled) {
-      // Load calendars first
-      await loadCalendars();
+      // Try loading calendars first — if it fails, user needs to connect
+      const loaded = await loadCalendars();
+      if (!loaded) {
+        // Don't enable yet, show connect button
+        setSettings((prev) => prev ? { ...prev, googleCalendarEnabled: true } : prev);
+        return;
+      }
     }
     setSettings((prev) =>
       prev ? { ...prev, googleCalendarEnabled: enabled } : prev
@@ -180,6 +241,19 @@ export default function SettingsClient() {
                     </option>
                   ))}
                 </select>
+              ) : !calendarConnected ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-yellow-400">
+                    Vous devez autoriser l&apos;acces a Google Calendar pour activer la synchronisation.
+                  </p>
+                  <button
+                    onClick={connectGoogleCalendar}
+                    disabled={connecting}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+                  >
+                    {connecting ? "Connexion..." : "Connecter Google Calendar"}
+                  </button>
+                </div>
               ) : (
                 <div className="text-sm text-yellow-400">
                   Aucun calendrier trouve. Vous devez vous deconnecter puis vous
