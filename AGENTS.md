@@ -11,7 +11,28 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Framework**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Database**: SQLite via Prisma 7 (`@prisma/adapter-libsql`)
 - **Auth**: NextAuth v5 (beta) with Google OAuth
+- **Roles**: Artist / Booker (chosen at onboarding)
 - **Calendar**: Google Calendar API sync
+
+## Roles
+
+### Artist
+- Sees only their own bookings and promoters
+- Standard dashboard with Table / Calendar / Promoters tabs
+
+### Booker
+- Manages multiple artists via `BookerArtist` join table
+- Artist selector in header to switch between artists
+- Views/creates bookings and promoters on behalf of the selected artist
+- Adds artists by email (artist must have an account with role "artist")
+- `/onboarding` page for first-time role selection
+
+### Key files for roles
+- `prisma/schema.prisma` — `BookerArtist` model, `User.role` and `User.artistName`
+- `src/app/onboarding/` — Role selection page
+- `src/app/api/user/role/route.ts` — Set user role
+- `src/app/api/artists/route.ts` — List/add managed artists (booker only)
+- `src/components/ArtistSelector.tsx` — Header dropdown for bookers
 
 ## Venue Search
 

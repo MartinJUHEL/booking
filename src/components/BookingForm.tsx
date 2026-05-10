@@ -16,9 +16,10 @@ interface Props {
   onSave: (data: Partial<Booking>) => void;
   onClose: () => void;
   onPromoterCreated?: (promoter: Promoter) => void;
+  artistId?: string;
 }
 
-export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated }: Props) {
+export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated, artistId }: Props) {
   const [form, setForm] = useState({
     date: booking?.date ? new Date(booking.date).toISOString().split("T")[0] : "",
     time: booking?.time || "",
@@ -54,7 +55,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
       const res = await fetch("/api/promoters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPromoter),
+        body: JSON.stringify(artistId ? { ...newPromoter, artistId } : newPromoter),
       });
       const created: Promoter = await res.json();
       setForm((prev) => ({ ...prev, promoter: created.name, promoterId: created.id }));

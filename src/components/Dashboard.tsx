@@ -17,9 +17,13 @@ interface PromoterWithCount extends Promoter {
 export default function Dashboard({
   initialBookings,
   initialPromoters,
+  role = "artist",
+  artistId,
 }: {
   initialBookings: Booking[];
   initialPromoters: PromoterWithCount[];
+  role?: "artist" | "booker";
+  artistId?: string;
 }) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [promoters, setPromoters] = useState<PromoterWithCount[]>(initialPromoters);
@@ -67,10 +71,11 @@ export default function Dashboard({
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
     } else {
+      const payload = artistId ? { ...data, artistId } : data;
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const created = await res.json();
       setBookings((prev) => [...prev, created].sort(
@@ -105,10 +110,11 @@ export default function Dashboard({
         prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
       );
     } else {
+      const payload = artistId ? { ...data, artistId } : data;
       const res = await fetch("/api/promoters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const created = await res.json();
       setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
@@ -257,6 +263,7 @@ export default function Dashboard({
           onPromoterCreated={(p) => {
             setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
           }}
+          artistId={artistId}
         />
       )}
 

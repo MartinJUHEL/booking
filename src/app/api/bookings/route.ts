@@ -4,13 +4,40 @@ import { syncBookingToCalendar } from "@/lib/google-calendar";
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  let targetUserId: string;
+
+  if (user?.role === "booker") {
+    // Booker can view a specific artist's bookings
+    const artistId = req.nextUrl.searchParams.get("artistId");
+    if (!artistId) {
+      return NextResponse.json([]);
+    }
+    // Verify the booker manages this artist
+    const relation = await prisma.bookerArtist.findUnique({
+      where: { bookerId_artistId: { bookerId: session.user.id, artistId } },
+    });
+    if (!relation) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    targetUserId = artistId;
+  } else {
+    // Artist sees their own bookings
+    targetUserId = session.user.id;
+  }
+
   const bookings = await prisma.booking.findMany({
+    where: { userId: targetUserId },
     orderBy: { date: "asc" },
     include: { user: { select: { name: true, email: true } } },
   });
@@ -25,6 +52,24 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  // Determine which user owns this booking
+  let targetUserId = session.user.id;
+  if (user?.role === "booker" && body.artistId) {
+    // Verify the booker manages this artist
+    const relation = await prisma.bookerArtist.findUnique({
+      where: { bookerId_artistId: { bookerId: session.user.id, artistId: body.artistId } },
+    });
+    if (!relation) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    targetUserId = body.artistId;
+  }
 
   const booking = await prisma.booking.create({
     data: {
@@ -45,7 +90,7 @@ export async function POST(req: NextRequest) {
       hotelInfo: body.hotelInfo || null,
       notes: body.notes || null,
       status: body.status || "pending",
-      userId: session.user.id,
+      userId: targetUserId,
     },
   });
 

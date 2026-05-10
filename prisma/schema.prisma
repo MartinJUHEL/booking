@@ -16,15 +16,31 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  role          String    @default("booker") // "artist" or "booker"
+  role          String?   // "artist" or "booker" — null until onboarding
+  artistName    String?   // Display name for artists (stage name)
   googleCalendarEnabled Boolean @default(false)
   googleCalendarId      String? // Google Calendar ID to sync to
   accounts      Account[]
   sessions      Session[]
   bookings      Booking[]
   promoters     Promoter[]
+  // Booker relations
+  managedArtists BookerArtist[] @relation("BookerToArtist")
+  // Artist relations (bookers managing this artist)
+  bookers        BookerArtist[] @relation("ArtistToBooker")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model BookerArtist {
+  id        String   @id @default(cuid())
+  bookerId  String
+  artistId  String
+  booker    User     @relation("BookerToArtist", fields: [bookerId], references: [id], onDelete: Cascade)
+  artist    User     @relation("ArtistToBooker", fields: [artistId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([bookerId, artistId])
 }
 
 model Account {
