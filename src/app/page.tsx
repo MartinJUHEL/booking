@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
@@ -45,12 +46,13 @@ function HomeContent() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
     if (!loading && user && !user.role) {
-      router.push("/onboarding");
+      router.replace("/onboarding");
     }
-  }, [loading, user, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   const isBooker = user?.role === "booker";
 
@@ -250,9 +252,9 @@ function HeaderBar({
               selectedId={selectedArtistId}
             />
           )}
-          <a href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+          <Link href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
             Configuration
-          </a>
+          </Link>
           <span className="text-sm text-gray-400">{user.name || user.email}</span>
           <button
             onClick={onLogout}

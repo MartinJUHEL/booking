@@ -11,12 +11,13 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
     if (!loading && user?.role) {
-      router.push("/");
+      router.replace("/");
     }
-  }, [loading, user, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   if (loading || !user) {
     return (

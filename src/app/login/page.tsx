@@ -13,9 +13,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push(user.role ? "/" : "/onboarding");
+      router.replace(user.role ? "/" : "/onboarding");
     }
-  }, [loading, user, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   useEffect(() => {
     // Load Google Identity Services

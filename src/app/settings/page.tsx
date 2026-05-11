@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import SettingsClient from "./SettingsClient";
 
@@ -11,16 +12,21 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login");
+      router.replace("/login");
     }
-  }, [loading, user, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">Chargement...</div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -32,12 +38,12 @@ export default function SettingsPage() {
             <h1 className="text-xl font-bold">DJ Booking Manager</h1>
           </div>
           <div className="flex items-center gap-4">
-            <a
+            <Link
               href="/"
               className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
             >
               Retour au dashboard
-            </a>
+            </Link>
             <span className="text-sm text-gray-400">
               {user.name || user.email}
             </span>

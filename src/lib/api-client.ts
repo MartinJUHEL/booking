@@ -35,9 +35,11 @@ class ApiClient {
     });
 
     if (res.status === 401) {
-      this.clearToken();
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+      // Only clear token if the auth check itself failed (user/me)
+      // For other endpoints, the 401 might mean an external token expired
+      // (e.g. Google Calendar), not the user's session
+      if (path === "/api/user/me" || path === "/api/auth/google") {
+        this.clearToken();
       }
       throw new Error("Unauthorized");
     }
