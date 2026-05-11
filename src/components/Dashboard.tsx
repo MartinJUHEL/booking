@@ -301,6 +301,7 @@ export default function Dashboard({
             setSelectedBookingId(null);
             handleEdit(b);
           }}
+          role={role}
         />
       )}
 

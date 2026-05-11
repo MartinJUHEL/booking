@@ -17,7 +17,10 @@ export default function OnboardingClient({ userName }: { userName: string }) {
     setSaving(true);
 
     try {
-      await api.put("/api/user/role", { role, artistName: artistName || undefined });
+      const result = await api.put<{ role: string; artistName?: string; token: string }>("/api/user/role", { role, artistName: artistName || undefined });
+      if (result.token) {
+        api.setToken(result.token);
+      }
       await refreshUser();
       router.push("/");
     } catch (err) {

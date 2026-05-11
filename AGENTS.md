@@ -42,6 +42,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
 | `src/components/PromoterList.tsx` | Promoter cards grid view (clickable to open detail panel) |
 | `src/components/PromoterDetail.tsx` | Side panel showing promoter details with copy-to-clipboard on each field |
+| `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
+| `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
 | `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
@@ -117,6 +119,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - Artist selector in header to switch between artists
 - Views/creates bookings and promoters on behalf of the selected artist
 - Adds artists by email (artist must have an account with role "artist")
+- Can send advancing form links to promoters and validate sent fields one by one
 - `/onboarding` page for first-time role selection
 
 ## Booking List/Detail Pattern
@@ -137,6 +140,38 @@ Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) w
 - Notes
 
 The panel has a "Modifier" button to open the edit form.
+
+## Advancing Form (Booker Only)
+
+The advancing feature allows bookers to send a form link to promoters to collect event details.
+
+### BookingDetail Integration (`AdvancingReview` component)
+- **Advancing section** in BookingDetail panel (visible only for bookers, `role === "booker"`)
+- **Send Link**: form to enter promoter email → creates advancing form + sends invite email + copies link to clipboard
+- **Forms list**: shows all advancing links with status, sent/validated field counts, copy/revoke actions
+- **"Review Advancing Form" button**: appears when any field has been sent (`sentFields > 0`), opens a full-width slide-in panel for field-by-field validation
+
+### Review Panel (slide-in, `AdvancingReviewPanel`)
+- Progress bar showing validated/total sent fields
+- Sections as collapsible accordions with per-section progress counters
+- Only shows fields the promoter has **sent** (not drafts)
+- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking), **"x" button** (reject with comment)
+- Validated fields show green "Valide" badge
+- Rejected fields: promoter sees rejection message, can re-edit and re-send
+
+### Public Advancing Page (`/advancing/[formId]`)
+- **Step 1**: Email input → request verification code
+- **Step 2**: 6-digit code input → verify → get advancing JWT (stored in `localStorage`)
+- **Step 3**: Multi-section form with accordions, auto-save on blur/change (500ms debounce)
+- **Pre-filled fields**: fields already filled by the booker at booking creation appear as validated (green badge, greyed out `opacity-60`, read-only). The promoter cannot modify or re-send them.
+- **Per-field "Send" button**: each non-validated field has a "Send" button next to it. Promoter fills a field (auto-saved as draft) then clicks "Send" to make it visible to the booker
+- **No global "Submit" button** — fields are sent individually
+- **Validated fields are locked**: inputs are `readOnly`, the "Send" button is hidden, backend also rejects save/send attempts (400)
+- Sections: Show, Promoter, Venue, Tickets, Contacts, Event Details, Hotel, Dinner, Arrival, Show Transfers, Departure
+- Section headers show sent/total counter (e.g. "3/7 sent")
+- Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker), rejected (red with booker's comment)
+- Token expiry: re-entering email + new code restores access (data persisted server-side)
+- Uses direct `fetch()` with advancing JWT (not `api-client.ts` which uses the main JWT)
 
 ## Promoter Detail Panel
 
@@ -164,3 +199,5 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **File downloads** use `api.downloadFile()` (fetch + blob URL to pass JWT auth, not plain `<a href>`)
 - **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
+- **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
+- **Advancing review** is only visible to bookers — the `BookingDetail` component receives a `role` prop and conditionally renders the `AdvancingReview` component

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Booking } from "./types";
 import { api } from "@/lib/api-client";
+import AdvancingReview from "./AdvancingReview";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -20,10 +21,12 @@ export default function BookingDetail({
   bookingId,
   onClose,
   onEdit,
+  role,
 }: {
   bookingId: string;
   onClose: () => void;
   onEdit: (b: Booking) => void;
+  role?: "artist" | "booker";
 }) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +225,13 @@ export default function BookingDetail({
             <section className="space-y-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</h3>
               <p className="text-sm text-gray-400 whitespace-pre-wrap">{booking.notes}</p>
+            </section>
+          )}
+
+          {/* Advancing (booker only) */}
+          {role === "booker" && (
+            <section className="space-y-2">
+              <AdvancingReview bookingId={booking.id} />
             </section>
           )}
         </div>

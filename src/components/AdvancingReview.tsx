@@ -1,0 +1,458 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api-client";
+import { SECTIONS } from "@/app/advancing/[formId]/page";
+import type { AdvancingForm, AdvancingFieldValue, SectionDef, FieldDef } from "@/app/advancing/[formId]/page";
+
+interface AdvancingFormListItem {
+  id: string;
+  allowedEmail: string;
+  status: string;
+  totalFields: number;
+  sentFields: number;
+  validatedFields: number;
+  createdAt: string;
+}
+
+export default function AdvancingReview({ bookingId }: { bookingId: string }) {
+  const [forms, setForms] = useState<AdvancingFormListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [openPanel, setOpenPanel] = useState(false);
+  const [reviewForm, setReviewForm] = useState<AdvancingForm | null>(null);
+
+  useEffect(() => {
+    loadForms();
+  }, [bookingId]);
+
+  async function loadForms() {
+    setLoading(true);
+    try {
+      const data = await api.get<AdvancingFormListItem[]>(`/api/bookings/${bookingId}/advancing`);
+      setForms(data);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadReview() {
+    try {
+      const data = await api.get<AdvancingForm>(`/api/bookings/${bookingId}/advancing/review`);
+      setReviewForm(data);
+    } catch {
+      setReviewForm(null);
+    }
+  }
+
+  async function handleOpenPanel() {
+    await loadReview();
+    setOpenPanel(true);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const result = await api.post<{ formId: string; publicUrl: string }>(`/api/bookings/${bookingId}/advancing`, { email: newEmail });
+      await navigator.clipboard.writeText(result.publicUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+      setNewEmail("");
+      setShowCreate(false);
+      loadForms();
+    } catch {
+      // ignore
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleDelete(formId: string) {
+    if (!confirm("Revoquer ce lien advancing ?")) return;
+    try {
+      await api.delete(`/api/bookings/${bookingId}/advancing/${formId}`);
+      loadForms();
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleCopyLink(formId: string) {
+    const url = `${window.location.origin}/advancing/${formId}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  }
+
+  if (loading) {
+    return <div className="text-gray-400 text-sm py-4">Chargement...</div>;
+  }
+
+  const hasSentFields = forms.some(f => f.sentFields > 0);
+
+  return (
+    <>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Advancing</h3>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            + Send Link
+          </button>
+        </div>
+
+        {copiedLink && (
+          <div className="text-xs text-green-400 bg-green-500/10 rounded-lg px-3 py-2">
+            Link copied to clipboard!
+          </div>
+        )}
+
+        {showCreate && (
+          <form onSubmit={handleCreate} className="flex gap-2">
+            <input
+              type="email"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              placeholder="Promoter email"
+              required
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500"
+            />
+            <button
+              type="submit"
+              disabled={creating}
+              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs transition-colors"
+            >
+              {creating ? "..." : "Send"}
+            </button>
+          </form>
+        )}
+
+        {forms.length === 0 && !showCreate && (
+          <p className="text-sm text-gray-600 italic">Aucun advancing envoye</p>
+        )}
+
+        {forms.map(f => (
+          <div key={f.id} className="rounded-xl bg-gray-800/50 border border-gray-800 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{f.allowedEmail}</p>
+                <p className="text-xs text-gray-500">
+                  {new Date(f.createdAt).toLocaleDateString("fr-FR")} —{" "}
+                  <span className={f.status === "submitted" ? "text-green-400" : f.status === "completed" ? "text-blue-400" : "text-yellow-400"}>
+                    {f.status}
+                  </span>
+                    {f.sentFields > 0 && (
+                      <span className="text-gray-500 ml-2">{f.validatedFields}/{f.sentFields} valides</span>
+                    )}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleCopyLink(f.id)}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={() => handleDelete(f.id)}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Revoke
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Button to open full review panel */}
+        {hasSentFields && (
+          <button
+            onClick={handleOpenPanel}
+            className="w-full bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 font-medium py-3 rounded-lg text-sm transition-colors border border-purple-500/30"
+          >
+            Review Advancing Form
+          </button>
+        )}
+      </div>
+
+      {/* Full-screen review panel */}
+      {openPanel && reviewForm && (
+        <AdvancingReviewPanel
+          form={reviewForm}
+          onClose={() => setOpenPanel(false)}
+          onUpdate={loadReview}
+        />
+      )}
+    </>
+  );
+}
+
+// ======================== FULL REVIEW PANEL ========================
+
+function AdvancingReviewPanel({
+  form,
+  onClose,
+  onUpdate,
+}: {
+  form: AdvancingForm;
+  onClose: () => void;
+  onUpdate: () => void;
+}) {
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [localForm, setLocalForm] = useState(form);
+
+  useEffect(() => {
+    setLocalForm(form);
+  }, [form]);
+
+  async function handleValidate(fieldValue: AdvancingFieldValue) {
+    setValidatingId(fieldValue.id);
+    try {
+      const updated = await api.put<AdvancingFieldValue>(`/api/advancing/fields/${fieldValue.id}/validate`);
+      setLocalForm(prev => ({
+        ...prev,
+        fieldValues: prev.fieldValues.map(fv => fv.id === fieldValue.id ? updated : fv),
+      }));
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingId(null);
+    }
+  }
+
+  async function handleReject(fieldValue: AdvancingFieldValue) {
+    const comment = prompt("Commentaire de rejet (optionnel) :");
+    setValidatingId(fieldValue.id);
+    try {
+      const updated = await api.put<AdvancingFieldValue>(`/api/advancing/fields/${fieldValue.id}/reject`, { comment });
+      setLocalForm(prev => ({
+        ...prev,
+        fieldValues: prev.fieldValues.map(fv => fv.id === fieldValue.id ? updated : fv),
+      }));
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingId(null);
+    }
+  }
+
+  const getFieldValue = (section: string, key: string): AdvancingFieldValue | undefined => {
+    return localForm.fieldValues.find(fv => fv.section === section && fv.fieldKey === key);
+  };
+
+  const dateStr = localForm.bookingDate
+    ? new Date(localForm.bookingDate).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+    : "";
+
+  const totalFields = localForm.fieldValues.length;
+  const validatedFields = localForm.fieldValues.filter(fv => fv.validatedAt).length;
+
+  return (
+    <div className="fixed inset-0 z-70 flex justify-end">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-gray-900 border-l border-gray-800 h-full overflow-y-auto animate-slide-in">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 sticky top-0 bg-gray-900 z-10">
+          <div>
+            <h2 className="text-lg font-bold">Advancing Review</h2>
+            <p className="text-sm text-gray-400">
+              {localForm.artistName && <span>{localForm.artistName} — </span>}
+              {dateStr}
+              <span className="ml-3 text-xs text-gray-500">{validatedFields}/{totalFields} valides</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-white transition-colors text-xl ml-4"
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="px-6 py-3 border-b border-gray-800">
+          <div className="w-full bg-gray-800 rounded-full h-2">
+            <div
+              className="bg-green-500 h-2 rounded-full transition-all"
+              style={{ width: totalFields > 0 ? `${(validatedFields / totalFields) * 100}%` : "0%" }}
+            />
+          </div>
+        </div>
+
+        {/* Sections */}
+        <div className="p-6 space-y-6">
+          {SECTIONS.map(section => (
+            <ReviewSection
+              key={section.key}
+              section={section}
+              getFieldValue={getFieldValue}
+              validatingId={validatingId}
+              onValidate={handleValidate}
+              onReject={handleReject}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewSection({
+  section,
+  getFieldValue,
+  validatingId,
+  onValidate,
+  onReject,
+}: {
+  section: SectionDef;
+  getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
+  validatingId: string | null;
+  onValidate: (fv: AdvancingFieldValue) => void;
+  onReject: (fv: AdvancingFieldValue) => void;
+}) {
+  const [open, setOpen] = useState(true);
+
+  // Only show sections that have at least one submitted value
+  const filledFields = section.fields.filter(f => {
+    const fv = getFieldValue(section.key, f.key);
+    return fv && fv.value;
+  });
+
+  if (filledFields.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border border-gray-800 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-5 py-3 flex items-center justify-between bg-gray-800/50 hover:bg-gray-800 transition-colors"
+      >
+        <h3 className="text-sm font-semibold uppercase tracking-wider">{section.label}</h3>
+        <div className="flex items-center gap-2">
+          <SectionProgress section={section} getFieldValue={getFieldValue} />
+          <span className="text-gray-500 text-sm">{open ? "−" : "+"}</span>
+        </div>
+      </button>
+      {open && (
+        <div className="divide-y divide-gray-800/50">
+          {section.fields.map(field => {
+            const fv = getFieldValue(section.key, field.key);
+            if (!fv || !fv.value) return null;
+
+            return (
+              <ReviewField
+                key={field.key}
+                field={field}
+                fieldValue={fv}
+                validating={validatingId === fv.id}
+                onValidate={() => onValidate(fv)}
+                onReject={() => onReject(fv)}
+              />
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SectionProgress({
+  section,
+  getFieldValue,
+}: {
+  section: SectionDef;
+  getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
+}) {
+  const filled = section.fields.filter(f => {
+    const fv = getFieldValue(section.key, f.key);
+    return fv && fv.value;
+  });
+  const validated = filled.filter(f => {
+    const fv = getFieldValue(section.key, f.key);
+    return fv?.validatedAt;
+  });
+
+  if (filled.length === 0) return null;
+
+  const allDone = validated.length === filled.length;
+
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full ${allDone ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"}`}>
+      {validated.length}/{filled.length}
+    </span>
+  );
+}
+
+function ReviewField({
+  field,
+  fieldValue,
+  validating,
+  onValidate,
+  onReject,
+}: {
+  field: FieldDef;
+  fieldValue: AdvancingFieldValue;
+  validating: boolean;
+  onValidate: () => void;
+  onReject: () => void;
+}) {
+  const isValidated = !!fieldValue.validatedAt;
+  const isRejected = !isValidated && fieldValue.rejectionComment != null;
+  const isPending = !isValidated && !isRejected;
+
+  // Format display value
+  let displayValue = fieldValue.value || "—";
+  if (field.type === "boolean") {
+    displayValue = fieldValue.value === "true" ? "Yes" : "No";
+  }
+
+  return (
+    <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : isRejected ? "bg-red-500/5" : ""}`}>
+      {/* Label + value */}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-500">{field.label}</p>
+        <p className="text-sm text-gray-200 break-words">{displayValue}</p>
+        {isRejected && fieldValue.rejectionComment && (
+          <p className="text-xs text-red-400 mt-1">Rejet : {fieldValue.rejectionComment}</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {isValidated ? (
+          <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
+            Valide
+          </span>
+        ) : (
+          <>
+            <button
+              onClick={onValidate}
+              disabled={validating}
+              className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
+            >
+              {validating ? "..." : "Valider"}
+            </button>
+            <button
+              onClick={onReject}
+              disabled={validating}
+              className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
+              title="Rejeter"
+            >
+              ✗
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
