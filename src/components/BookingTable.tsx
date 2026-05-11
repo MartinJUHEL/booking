@@ -117,8 +117,8 @@ export default function BookingTable({
                 <td className="px-4 py-3 text-center">
                   <Check checked={b.artistFeesPaid} />
                 </td>
-                <td className="px-4 py-3 text-center" title={b.transportInfo || ""}>
-                  <Check checked={b.transportBooked} />
+                <td className="px-4 py-3 text-center" title={b.transports?.some(t => t.booked) ? `${b.transports.filter(t => t.booked).length} transport(s)` : ""}>
+                  <Check checked={b.transports?.some(t => t.booked) ?? false} />
                 </td>
                 <td className="px-4 py-3 text-center" title={b.hotel?.name || ""}>
                   <Check checked={b.hotel?.booked ?? false} />

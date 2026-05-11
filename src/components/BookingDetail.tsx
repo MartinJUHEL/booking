@@ -113,16 +113,51 @@ export default function BookingDetail({
           </section>
 
           {/* Transport */}
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Transport</h3>
-            {booking.transportBooked ? (
-              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4">
-                <p className="text-sm text-gray-300">{booking.transportInfo || "Réservé"}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600 italic">Aucun transport réservé</p>
-            )}
-          </section>
+          {["outbound", "return"].map((type) => {
+            const transport = booking.transports?.find(t => t.type === type);
+            const label = type === "outbound" ? "Transport aller" : "Transport retour";
+            return (
+              <section key={type} className="space-y-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</h3>
+                {transport?.booked ? (
+                  <div className="space-y-2">
+                    {transport.legs.map((leg, i) => (
+                      <div key={leg.id || i} className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          {leg.mode && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 capitalize">
+                              {leg.mode === "plane" ? "Avion" : leg.mode === "train" ? "Train" : leg.mode === "bus" ? "Bus" : leg.mode === "car" ? "Voiture" : leg.mode === "taxi" ? "Taxi/VTC" : leg.mode === "ferry" ? "Ferry" : leg.mode}
+                            </span>
+                          )}
+                          {leg.carrier && <span className="text-xs text-gray-400">{leg.carrier}</span>}
+                        </div>
+                        {(leg.departureLocation || leg.arrivalLocation) && (
+                          <p className="text-sm text-gray-300">
+                            {leg.departureLocation || "?"} → {leg.arrivalLocation || "?"}
+                          </p>
+                        )}
+                        {(leg.departureTime || leg.arrivalTime) && (
+                          <p className="text-xs text-gray-400">
+                            {leg.departureTime && new Date(leg.departureTime).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                            {leg.departureTime && leg.arrivalTime && " → "}
+                            {leg.arrivalTime && new Date(leg.arrivalTime).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                          </p>
+                        )}
+                        {leg.bookingReference && (
+                          <div>
+                            <p className="text-xs text-gray-500">N° réservation</p>
+                            <p className="text-sm font-mono text-gray-300">{leg.bookingReference}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 italic">Aucun transport réservé</p>
+                )}
+              </section>
+            );
+          })}
 
           {/* Checklist */}
           <section className="space-y-2">

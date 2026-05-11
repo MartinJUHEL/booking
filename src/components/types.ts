@@ -25,6 +25,26 @@ export interface Hotel {
   lateCheckout: boolean;
 }
 
+export interface TransportLeg {
+  id?: string;
+  order: number;
+  mode: string | null;
+  departureLocation: string | null;
+  arrivalLocation: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  bookingReference: string | null;
+  carrier: string | null;
+  notes: string | null;
+}
+
+export interface Transport {
+  id?: string;
+  type: "outbound" | "return";
+  booked: boolean;
+  legs: TransportLeg[];
+}
+
 export interface Booking {
   id: string;
   date: string;
@@ -39,9 +59,8 @@ export interface Booking {
   contractSigned: boolean;
   agencyFeesPaid: boolean;
   artistFeesPaid: boolean;
-  transportBooked: boolean;
-  transportInfo: string | null;
   hotel: Hotel;
+  transports: Transport[];
   notes: string | null;
   status: string;
   userId: string;

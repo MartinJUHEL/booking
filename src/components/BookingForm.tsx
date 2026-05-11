@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { Booking, Promoter } from "./types";
+import type { Booking, Promoter, Transport, TransportLeg } from "./types";
 import { api } from "@/lib/api-client";
 
 interface VenueResult {
@@ -20,6 +20,28 @@ interface Props {
   artistId?: string;
 }
 
+function emptyLeg(): TransportLeg {
+  return { order: 0, mode: null, departureLocation: null, arrivalLocation: null, departureTime: null, arrivalTime: null, bookingReference: null, carrier: null, notes: null };
+}
+
+function initTransports(transports?: Transport[]): Transport[] {
+  if (transports && transports.length > 0) return transports.map(t => ({ ...t, legs: t.legs.length > 0 ? t.legs : [emptyLeg()] }));
+  return [
+    { type: "outbound" as const, booked: false, legs: [emptyLeg()] },
+    { type: "return" as const, booked: false, legs: [emptyLeg()] },
+  ];
+}
+
+const transportModes = [
+  { value: "plane", label: "Avion" },
+  { value: "train", label: "Train" },
+  { value: "bus", label: "Bus" },
+  { value: "car", label: "Voiture" },
+  { value: "taxi", label: "Taxi/VTC" },
+  { value: "ferry", label: "Ferry" },
+  { value: "other", label: "Autre" },
+];
+
 export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated, artistId }: Props) {
   const [form, setForm] = useState({
     date: booking?.date ? new Date(booking.date).toISOString().split("T")[0] : "",
@@ -33,8 +55,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     contractSigned: booking?.contractSigned || false,
     agencyFeesPaid: booking?.agencyFeesPaid || false,
     artistFeesPaid: booking?.artistFeesPaid || false,
-    transportBooked: booking?.transportBooked || false,
-    transportInfo: booking?.transportInfo || "",
+    transports: initTransports(booking?.transports),
     hotel: {
       booked: booking?.hotel?.booked || false,
       name: booking?.hotel?.name || "",
@@ -207,6 +228,16 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
 
   function setHotel<K extends keyof typeof form.hotel>(key: K, value: (typeof form.hotel)[K]) {
     setForm((prev) => ({ ...prev, hotel: { ...prev.hotel, [key]: value } }));
+  }
+
+  function updateLeg<K extends keyof TransportLeg>(tIdx: number, lIdx: number, key: K, value: TransportLeg[K]) {
+    setForm((prev) => {
+      const transports = [...prev.transports];
+      const legs = [...transports[tIdx].legs];
+      legs[lIdx] = { ...legs[lIdx], [key]: value };
+      transports[tIdx] = { ...transports[tIdx], legs };
+      return { ...prev, transports };
+    });
   }
 
   return (
@@ -471,21 +502,118 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
           </div>
 
           {/* Transport */}
-          <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
-            <Checkbox
-              label="Transport réservé"
-              checked={form.transportBooked}
-              onChange={(v) => set("transportBooked", v)}
-            />
-            {form.transportBooked && (
-              <input
-                value={form.transportInfo}
-                onChange={(e) => set("transportInfo", e.target.value)}
-                className="input"
-                placeholder="Vol AF123 - CDG 18h00..."
+          {form.transports.map((transport, tIdx) => (
+            <div key={transport.type} className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
+              <Checkbox
+                label={transport.type === "outbound" ? "Transport aller réservé" : "Transport retour réservé"}
+                checked={transport.booked}
+                onChange={(v) => {
+                  const updated = [...form.transports];
+                  updated[tIdx] = { ...updated[tIdx], booked: v };
+                  setForm((prev) => ({ ...prev, transports: updated }));
+                }}
               />
-            )}
-          </div>
+              {transport.booked && (
+                <div className="space-y-4">
+                  {transport.legs.map((leg, lIdx) => (
+                    <div key={lIdx} className="space-y-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-400">Trajet {lIdx + 1}</span>
+                        {transport.legs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...form.transports];
+                              updated[tIdx] = { ...updated[tIdx], legs: updated[tIdx].legs.filter((_, i) => i !== lIdx) };
+                              setForm((prev) => ({ ...prev, transports: updated }));
+                            }}
+                            className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="Mode">
+                          <select
+                            value={leg.mode || ""}
+                            onChange={(e) => updateLeg(tIdx, lIdx, "mode", e.target.value || null)}
+                            className="input"
+                          >
+                            <option value="">-- Mode --</option>
+                            {transportModes.map((m) => (
+                              <option key={m.value} value={m.value}>{m.label}</option>
+                            ))}
+                          </select>
+                        </Field>
+                        <Field label="Compagnie">
+                          <input
+                            value={leg.carrier || ""}
+                            onChange={(e) => updateLeg(tIdx, lIdx, "carrier", e.target.value || null)}
+                            className="input"
+                            placeholder="SNCF, Ryanair..."
+                          />
+                        </Field>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="Départ">
+                          <StationAutocomplete
+                            value={leg.departureLocation || ""}
+                            onChange={(v) => updateLeg(tIdx, lIdx, "departureLocation", v || null)}
+                            placeholder="Gare de Lyon, CDG T2..."
+                          />
+                        </Field>
+                        <Field label="Arrivée">
+                          <StationAutocomplete
+                            value={leg.arrivalLocation || ""}
+                            onChange={(v) => updateLeg(tIdx, lIdx, "arrivalLocation", v || null)}
+                            placeholder="Berlin Hbf, BCN T1..."
+                          />
+                        </Field>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="Heure départ">
+                          <input
+                            type="datetime-local"
+                            value={leg.departureTime ? leg.departureTime.slice(0, 16) : ""}
+                            onChange={(e) => updateLeg(tIdx, lIdx, "departureTime", e.target.value ? new Date(e.target.value).toISOString() : null)}
+                            className="input"
+                          />
+                        </Field>
+                        <Field label="Heure arrivée">
+                          <input
+                            type="datetime-local"
+                            value={leg.arrivalTime ? leg.arrivalTime.slice(0, 16) : ""}
+                            onChange={(e) => updateLeg(tIdx, lIdx, "arrivalTime", e.target.value ? new Date(e.target.value).toISOString() : null)}
+                            className="input"
+                          />
+                        </Field>
+                      </div>
+                      <Field label="N° de réservation">
+                        <input
+                          value={leg.bookingReference || ""}
+                          onChange={(e) => updateLeg(tIdx, lIdx, "bookingReference", e.target.value || null)}
+                          className="input"
+                          placeholder="ABC123"
+                        />
+                      </Field>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...form.transports];
+                      updated[tIdx] = { ...updated[tIdx], legs: [...updated[tIdx].legs, { ...emptyLeg(), order: updated[tIdx].legs.length }] };
+                      setForm((prev) => ({ ...prev, transports: updated }));
+                    }}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    + Ajouter un trajet
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
 
           {/* Hotel */}
           <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
@@ -629,5 +757,100 @@ function Checkbox({
       />
       <span className="text-sm text-gray-300">{label}</span>
     </label>
+  );
+}
+
+function StationAutocomplete({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  interface StationResult {
+    placeId: string;
+    name: string;
+    address: string;
+    secondaryText: string | null;
+  }
+
+  const [results, setResults] = useState<StationResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const search = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await api.get<StationResult[]>(`/api/stations/search?q=${encodeURIComponent(query)}`);
+      setResults(data);
+      setShowDropdown(data.length > 0);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  function handleChange(v: string) {
+    onChange(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => search(v), 350);
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        onFocus={() => results.length > 0 && setShowDropdown(true)}
+        className="input"
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      {loading && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">...</span>
+      )}
+      {showDropdown && (
+        <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+          {results.map((r) => (
+            <li key={r.placeId}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(r.name);
+                  setShowDropdown(false);
+                  setResults([]);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors"
+              >
+                <span className="text-white">{r.name}</span>
+                {r.secondaryText && (
+                  <span className="text-gray-400 ml-2 text-xs">{r.secondaryText}</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
