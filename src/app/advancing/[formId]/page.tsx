@@ -20,7 +20,6 @@ interface AdvancingFieldValue {
 interface AdvancingForm {
   id: string;
   bookingId: string;
-  allowedEmail: string;
   status: string;
   expiresAt: string | null;
   createdAt: string;

@@ -147,8 +147,8 @@ The advancing feature allows bookers to send a form link to promoters to collect
 
 ### BookingDetail Integration (`AdvancingReview` component)
 - **Advancing section** in BookingDetail panel (visible only for bookers, `role === "booker"`)
-- **Send Link**: form to enter promoter email → creates advancing form + sends invite email + copies link to clipboard
-- **Forms list**: shows all advancing links with status, sent/validated field counts, copy/revoke actions
+- **Send Link**: form to enter promoter email → creates form (if first) or adds access → sends invite email + copies link to clipboard
+- **Single form per booking**: shows field counts (sent/validated), list of email accesses with revoke buttons
 - **"Review Advancing Form" button**: appears when any field has been sent (`sentFields > 0`), opens a full-width slide-in panel for field-by-field validation
 
 ### Review Panel (slide-in, `AdvancingReviewPanel`)

@@ -5,18 +5,24 @@ import { api } from "@/lib/api-client";
 import { SECTIONS } from "@/app/advancing/[formId]/page";
 import type { AdvancingForm, AdvancingFieldValue, SectionDef, FieldDef } from "@/app/advancing/[formId]/page";
 
-interface AdvancingFormListItem {
+interface AdvancingAccessItem {
   id: string;
-  allowedEmail: string;
+  email: string;
+  createdAt: string;
+}
+
+interface AdvancingFormData {
+  id: string;
   status: string;
   totalFields: number;
   sentFields: number;
   validatedFields: number;
+  accesses: AdvancingAccessItem[];
   createdAt: string;
 }
 
 export default function AdvancingReview({ bookingId }: { bookingId: string }) {
-  const [forms, setForms] = useState<AdvancingFormListItem[]>([]);
+  const [formData, setFormData] = useState<AdvancingFormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -26,14 +32,14 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
   const [reviewForm, setReviewForm] = useState<AdvancingForm | null>(null);
 
   useEffect(() => {
-    loadForms();
+    loadForm();
   }, [bookingId]);
 
-  async function loadForms() {
+  async function loadForm() {
     setLoading(true);
     try {
-      const data = await api.get<AdvancingFormListItem[]>(`/api/bookings/${bookingId}/advancing`);
-      setForms(data);
+      const data = await api.get<AdvancingFormData | null>(`/api/bookings/${bookingId}/advancing`);
+      setFormData(data);
     } catch {
       // ignore
     } finally {
@@ -65,7 +71,7 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
       setTimeout(() => setCopiedLink(false), 3000);
       setNewEmail("");
       setShowCreate(false);
-      loadForms();
+      loadForm();
     } catch {
       // ignore
     } finally {
@@ -73,11 +79,11 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
     }
   }
 
-  async function handleDelete(formId: string) {
-    if (!confirm("Revoquer ce lien advancing ?")) return;
+  async function handleRevokeAccess(accessId: string) {
+    if (!confirm("Revoquer cet acces ?")) return;
     try {
-      await api.delete(`/api/bookings/${bookingId}/advancing/${formId}`);
-      loadForms();
+      await api.delete(`/api/bookings/${bookingId}/advancing/access/${accessId}`);
+      loadForm();
     } catch {
       // ignore
     }
@@ -94,7 +100,7 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
     return <div className="text-gray-400 text-sm py-4">Chargement...</div>;
   }
 
-  const hasSentFields = forms.some(f => f.sentFields > 0);
+  const hasSentFields = formData != null && formData.sentFields > 0;
 
   return (
     <>
@@ -136,42 +142,48 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
           </form>
         )}
 
-        {forms.length === 0 && !showCreate && (
+        {!formData && !showCreate && (
           <p className="text-sm text-gray-600 italic">Aucun advancing envoye</p>
         )}
 
-        {forms.map(f => (
-          <div key={f.id} className="rounded-xl bg-gray-800/50 border border-gray-800 p-3 space-y-2">
+        {formData && (
+          <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-3 space-y-3">
+            {/* Form status */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">{f.allowedEmail}</p>
                 <p className="text-xs text-gray-500">
-                  {new Date(f.createdAt).toLocaleDateString("fr-FR")} —{" "}
-                  <span className={f.status === "submitted" ? "text-green-400" : f.status === "completed" ? "text-blue-400" : "text-yellow-400"}>
-                    {f.status}
-                  </span>
-                    {f.sentFields > 0 && (
-                      <span className="text-gray-500 ml-2">{f.validatedFields}/{f.sentFields} valides</span>
-                    )}
+                  {new Date(formData.createdAt).toLocaleDateString("fr-FR")}
+                  {formData.sentFields > 0 && (
+                    <span className="ml-2">{formData.validatedFields}/{formData.sentFields} valides</span>
+                  )}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleCopyLink(f.id)}
-                  className="text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  Copy
-                </button>
-                <button
-                  onClick={() => handleDelete(f.id)}
-                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                >
-                  Revoke
-                </button>
-              </div>
+              <button
+                onClick={() => handleCopyLink(formData.id)}
+                className="text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                Copy link
+              </button>
             </div>
+
+            {/* Access list */}
+            {formData.accesses.length > 0 && (
+              <div className="space-y-1">
+                {formData.accesses.map(a => (
+                  <div key={a.id} className="flex items-center justify-between text-xs">
+                    <span className="text-gray-300">{a.email}</span>
+                    <button
+                      onClick={() => handleRevokeAccess(a.id)}
+                      className="text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ))}
+        )}
 
         {/* Button to open full review panel */}
         {hasSentFields && (
@@ -408,7 +420,6 @@ function ReviewField({
 }) {
   const isValidated = !!fieldValue.validatedAt;
   const isRejected = !isValidated && fieldValue.rejectionComment != null;
-  const isPending = !isValidated && !isRejected;
 
   // Format display value
   let displayValue = fieldValue.value || "—";
