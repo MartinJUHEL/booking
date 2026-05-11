@@ -32,10 +32,12 @@ export default function BookingTable({
   bookings,
   onEdit,
   onDelete,
+  onSelect,
 }: {
   bookings: Booking[];
   onEdit: (b: Booking) => void;
   onDelete: (id: string) => void;
+  onSelect?: (b: Booking) => void;
 }) {
   if (bookings.length === 0) {
     return (
@@ -71,7 +73,8 @@ export default function BookingTable({
             return (
               <tr
                 key={b.id}
-                className={`hover:bg-gray-900/50 transition-colors ${
+                onClick={() => onSelect?.(b)}
+                className={`hover:bg-gray-900/50 transition-colors cursor-pointer ${
                   isPast ? "opacity-50" : ""
                 }`}
               >
@@ -117,18 +120,18 @@ export default function BookingTable({
                 <td className="px-4 py-3 text-center" title={b.transportInfo || ""}>
                   <Check checked={b.transportBooked} />
                 </td>
-                <td className="px-4 py-3 text-center" title={b.hotelInfo || ""}>
-                  <Check checked={b.hotelBooked} />
+                <td className="px-4 py-3 text-center" title={b.hotel?.name || ""}>
+                  <Check checked={b.hotel?.booked ?? false} />
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
-                    onClick={() => onEdit(b)}
+                    onClick={(e) => { e.stopPropagation(); onEdit(b); }}
                     className="text-gray-500 hover:text-purple-400 transition-colors mr-2"
                   >
                     Modifier
                   </button>
                   <button
-                    onClick={() => onDelete(b.id)}
+                    onClick={(e) => { e.stopPropagation(); onDelete(b.id); }}
                     className="text-gray-500 hover:text-red-400 transition-colors"
                   >
                     Suppr.

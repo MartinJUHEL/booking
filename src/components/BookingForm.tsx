@@ -35,8 +35,14 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     artistFeesPaid: booking?.artistFeesPaid || false,
     transportBooked: booking?.transportBooked || false,
     transportInfo: booking?.transportInfo || "",
-    hotelBooked: booking?.hotelBooked || false,
-    hotelInfo: booking?.hotelInfo || "",
+    hotel: {
+      booked: booking?.hotel?.booked || false,
+      name: booking?.hotel?.name || "",
+      address: booking?.hotel?.address || "",
+      bookingNumber: booking?.hotel?.bookingNumber || "",
+      breakfast: booking?.hotel?.breakfast || false,
+      lateCheckout: booking?.hotel?.lateCheckout || false,
+    },
     notes: booking?.notes || "",
     status: booking?.status || "pending",
   });
@@ -137,8 +143,70 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Hotel address autocomplete (via backend API)
+  interface PlaceResult {
+    placeId: string;
+    name: string;
+    address: string;
+    secondaryText: string | null;
+  }
+
+  const [hotelPlaceResults, setHotelPlaceResults] = useState<PlaceResult[]>([]);
+  const [showHotelDropdown, setShowHotelDropdown] = useState(false);
+  const [hotelSearchLoading, setHotelSearchLoading] = useState(false);
+  const hotelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hotelWrapperRef = useRef<HTMLDivElement>(null);
+
+  const searchHotelAddress = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setHotelPlaceResults([]);
+      setShowHotelDropdown(false);
+      return;
+    }
+    setHotelSearchLoading(true);
+    try {
+      const data = await api.get<PlaceResult[]>(`/api/places/search?q=${encodeURIComponent(query)}`);
+      setHotelPlaceResults(data);
+      setShowHotelDropdown(data.length > 0);
+    } catch {
+      setHotelPlaceResults([]);
+    } finally {
+      setHotelSearchLoading(false);
+    }
+  }, []);
+
+  function handleHotelAddressChange(value: string) {
+    setHotel("address", value);
+    if (hotelTimerRef.current) clearTimeout(hotelTimerRef.current);
+    hotelTimerRef.current = setTimeout(() => searchHotelAddress(value), 350);
+  }
+
+  function selectHotelPlace(place: PlaceResult) {
+    setHotel("address", place.address);
+    if (!form.hotel.name) {
+      setHotel("name", place.name);
+    }
+    setShowHotelDropdown(false);
+    setHotelPlaceResults([]);
+  }
+
+  // Close hotel dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (hotelWrapperRef.current && !hotelWrapperRef.current.contains(e.target as Node)) {
+        setShowHotelDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function setHotel<K extends keyof typeof form.hotel>(key: K, value: (typeof form.hotel)[K]) {
+    setForm((prev) => ({ ...prev, hotel: { ...prev.hotel, [key]: value } }));
   }
 
   return (
@@ -423,16 +491,75 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
           <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
             <Checkbox
               label="Hotel réservé"
-              checked={form.hotelBooked}
-              onChange={(v) => set("hotelBooked", v)}
+              checked={form.hotel.booked}
+              onChange={(v) => setHotel("booked", v)}
             />
-            {form.hotelBooked && (
-              <input
-                value={form.hotelInfo}
-                onChange={(e) => set("hotelInfo", e.target.value)}
-                className="input"
-                placeholder="Mama Shelter - Chambre 204..."
-              />
+            {form.hotel.booked && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Nom de l'hôtel">
+                    <input
+                      value={form.hotel.name}
+                      onChange={(e) => setHotel("name", e.target.value)}
+                      className="input"
+                      placeholder="Mama Shelter, Ibis..."
+                    />
+                  </Field>
+                  <Field label="N° de réservation">
+                    <input
+                      value={form.hotel.bookingNumber}
+                      onChange={(e) => setHotel("bookingNumber", e.target.value)}
+                      className="input"
+                      placeholder="BKG-123456"
+                    />
+                  </Field>
+                </div>
+                <Field label="Adresse">
+                  <div ref={hotelWrapperRef} className="relative">
+                    <input
+                      value={form.hotel.address}
+                      onChange={(e) => handleHotelAddressChange(e.target.value)}
+                      onFocus={() => hotelPlaceResults.length > 0 && setShowHotelDropdown(true)}
+                      className="input"
+                      placeholder="Rechercher une adresse..."
+                      autoComplete="off"
+                    />
+                    {hotelSearchLoading && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">...</span>
+                    )}
+                    {showHotelDropdown && (
+                      <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+                        {hotelPlaceResults.map((p) => (
+                          <li key={p.placeId}>
+                            <button
+                              type="button"
+                              onClick={() => selectHotelPlace(p)}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors"
+                            >
+                              <span className="text-white">{p.name}</span>
+                              {p.secondaryText && (
+                                <span className="text-gray-400 ml-2 text-xs">{p.secondaryText}</span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </Field>
+                <div className="flex gap-6">
+                  <Checkbox
+                    label="Petit-déjeuner inclus"
+                    checked={form.hotel.breakfast}
+                    onChange={(v) => setHotel("breakfast", v)}
+                  />
+                  <Checkbox
+                    label="Late checkout"
+                    checked={form.hotel.lateCheckout}
+                    onChange={(v) => setHotel("lateCheckout", v)}
+                  />
+                </div>
+              </div>
             )}
           </div>
 

@@ -16,6 +16,15 @@ export interface Promoter {
   updatedAt: string;
 }
 
+export interface Hotel {
+  booked: boolean;
+  name: string | null;
+  address: string | null;
+  bookingNumber: string | null;
+  breakfast: boolean;
+  lateCheckout: boolean;
+}
+
 export interface Booking {
   id: string;
   date: string;
@@ -32,8 +41,7 @@ export interface Booking {
   artistFeesPaid: boolean;
   transportBooked: boolean;
   transportInfo: string | null;
-  hotelBooked: boolean;
-  hotelInfo: string | null;
+  hotel: Hotel;
   notes: string | null;
   status: string;
   userId: string;

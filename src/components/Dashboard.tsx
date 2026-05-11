@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import BookingTable from "./BookingTable";
 import BookingForm from "./BookingForm";
+import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
 import PromoterList from "./PromoterList";
 import PromoterForm from "./PromoterForm";
@@ -33,6 +34,7 @@ export default function Dashboard({
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [showPromoterForm, setShowPromoterForm] = useState(false);
   const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -66,6 +68,7 @@ export default function Dashboard({
       setBookings((prev) =>
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
+      setSelectedBooking((prev) => prev?.id === updated.id ? { ...prev, ...updated } : prev);
     } else {
       const payload = artistId ? { ...data, artistId } : data;
       const created = await api.post<Booking>("/api/bookings", payload);
@@ -220,6 +223,7 @@ export default function Dashboard({
           bookings={filtered}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onSelect={(b) => setSelectedBooking(b)}
         />
       ) : view === "calendar" ? (
         <CalendarView bookings={filtered} onEdit={handleEdit} />
@@ -256,6 +260,18 @@ export default function Dashboard({
           onClose={() => {
             setShowPromoterForm(false);
             setEditingPromoter(null);
+          }}
+        />
+      )}
+
+      {/* Booking Detail Panel */}
+      {selectedBooking && (
+        <BookingDetail
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onEdit={(b) => {
+            setSelectedBooking(null);
+            handleEdit(b);
           }}
         />
       )}

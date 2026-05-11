@@ -33,10 +33,33 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/login/page.tsx` | Google login with GIS |
 | `src/app/onboarding/` | Role selection (artist/booker) |
 | `src/app/settings/` | Google Calendar settings |
-| `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete + promoter selection |
+| `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs + booking detail panel |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields + Places autocomplete |
+| `src/components/BookingTable.tsx` | Booking list table with clickable rows |
+| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport, checklist) |
+| `src/components/CalendarView.tsx` | Monthly calendar view |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists |
-| `src/components/types.ts` | Shared TypeScript interfaces (Booking, Promoter) |
+| `src/components/PromoterForm.tsx` | Create/edit promoter modal |
+| `src/components/PromoterList.tsx` | Promoter cards grid view |
+| `src/components/types.ts` | Shared TypeScript interfaces (Booking, Hotel, Promoter) |
+
+## Data Model (TypeScript)
+
+### Hotel (nested object in Booking)
+```ts
+interface Hotel {
+  booked: boolean;
+  name: string | null;
+  address: string | null;
+  bookingNumber: string | null;
+  breakfast: boolean;
+  lateCheckout: boolean;
+}
+```
+
+`Booking.hotel` is a nested object (not flat fields). The backend returns it as `{ hotel: { booked, name, ... } }`.
+
+Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Google Places API).
 
 ## Roles
 
@@ -51,6 +74,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Adds artists by email (artist must have an account with role "artist")
 - `/onboarding` page for first-time role selection
 
+## Booking Detail Panel
+
+Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) showing:
+- Event info (date, venue, city, promoter, status, fee)
+- **Hotel/lodging** (name, address with Google Maps link, booking number, breakfast/late checkout tags)
+- Transport info
+- Checklist (contract, fees)
+- Notes
+
+The panel has a "Modifier" button to open the edit form.
+
 ## Environment Variables
 
 | Variable | Description |
@@ -64,3 +98,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **All pages are client components** — no server components with data fetching
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
 - **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role
+- **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
