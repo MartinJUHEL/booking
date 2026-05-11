@@ -36,6 +36,8 @@ export interface TransportLeg {
   bookingReference: string | null;
   carrier: string | null;
   notes: string | null;
+  ticketFileName: string | null;
+  ticketOriginalName: string | null;
 }
 
 export interface Transport {

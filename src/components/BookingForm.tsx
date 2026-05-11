@@ -21,7 +21,7 @@ interface Props {
 }
 
 function emptyLeg(): TransportLeg {
-  return { order: 0, mode: null, departureLocation: null, arrivalLocation: null, departureTime: null, arrivalTime: null, bookingReference: null, carrier: null, notes: null };
+  return { order: 0, mode: null, departureLocation: null, arrivalLocation: null, departureTime: null, arrivalTime: null, bookingReference: null, carrier: null, notes: null, ticketFileName: null, ticketOriginalName: null };
 }
 
 function initTransports(transports?: Transport[]): Transport[] {
@@ -597,6 +597,18 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                           placeholder="ABC123"
                         />
                       </Field>
+                      {/* Ticket upload */}
+                      <TicketUpload
+                        leg={leg}
+                        onUploaded={(fileName, originalName) => {
+                          updateLeg(tIdx, lIdx, "ticketFileName", fileName);
+                          updateLeg(tIdx, lIdx, "ticketOriginalName", originalName);
+                        }}
+                        onDeleted={() => {
+                          updateLeg(tIdx, lIdx, "ticketFileName", null);
+                          updateLeg(tIdx, lIdx, "ticketOriginalName", null);
+                        }}
+                      />
                     </div>
                   ))}
                   <button
@@ -757,6 +769,103 @@ function Checkbox({
       />
       <span className="text-sm text-gray-300">{label}</span>
     </label>
+  );
+}
+
+function TicketUpload({
+  leg,
+  onUploaded,
+  onDeleted,
+}: {
+  leg: TransportLeg;
+  onUploaded: (fileName: string, originalName: string) => void;
+  onDeleted: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleUpload(file: File) {
+    if (!leg.id) return;
+    setUploading(true);
+    try {
+      const result = await api.upload<{ ticketFileName: string; ticketOriginalName: string }>(
+        `/api/transport-legs/${leg.id}/ticket`,
+        file
+      );
+      onUploaded(result.ticketFileName, result.ticketOriginalName);
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function handleDelete() {
+    if (!leg.id) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/transport-legs/${leg.id}/ticket`);
+      onDeleted();
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (!leg.id) {
+    return (
+      <div className="text-xs text-gray-600 italic">
+        Enregistrez d&apos;abord pour ajouter un billet
+      </div>
+    );
+  }
+
+  return (
+    <Field label="Billet (PDF / Photo)">
+      {leg.ticketFileName ? (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => api.downloadFile(`/api/transport-legs/${leg.id}/ticket`, leg.ticketOriginalName || "ticket")}
+            className="text-sm text-purple-400 hover:text-purple-300 transition-colors truncate"
+          >
+            {leg.ticketOriginalName || "Voir le billet"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0"
+          >
+            {deleting ? "..." : "Supprimer"}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUpload(file);
+            }}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+          >
+            {uploading ? "Upload..." : "Ajouter un billet"}
+          </button>
+        </div>
+      )}
+    </Field>
   );
 }
 

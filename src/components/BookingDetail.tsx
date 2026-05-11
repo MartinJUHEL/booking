@@ -1,6 +1,7 @@
 "use client";
 
 import type { Booking } from "./types";
+import { api } from "@/lib/api-client";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -147,6 +148,17 @@ export default function BookingDetail({
                           <div>
                             <p className="text-xs text-gray-500">N° réservation</p>
                             <p className="text-sm font-mono text-gray-300">{leg.bookingReference}</p>
+                          </div>
+                        )}
+                        {leg.ticketFileName && leg.id && (
+                          <div>
+                            <p className="text-xs text-gray-500">Billet</p>
+                            <button
+                              onClick={() => api.downloadFile(`/api/transport-legs/${leg.id}/ticket`, leg.ticketOriginalName || "ticket")}
+                              className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                            >
+                              {leg.ticketOriginalName || "Télécharger"}
+                            </button>
                           </div>
                         )}
                       </div>
