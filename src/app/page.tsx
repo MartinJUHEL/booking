@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
-import ArtistSelector from "@/components/ArtistSelector";
+import BookerDashboard from "@/components/BookerDashboard";
 import type { BookingListItem, Promoter } from "@/components/types";
 
 interface Artist {
@@ -32,7 +32,6 @@ export default function Home() {
 function HomeContent() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [artists, setArtists] = useState<Artist[]>([]);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
@@ -64,24 +63,9 @@ function HomeContent() {
       setDataLoading(true);
       try {
         if (isBooker) {
+          // Booker dashboard only needs artists list; BookerDashboard handles its own data
           const artistsData = await api.get<Artist[]>("/api/artists");
           setArtists(artistsData);
-
-          const paramArtistId = searchParams.get("artistId");
-          const targetId = paramArtistId && artistsData.some(a => a.id === paramArtistId)
-            ? paramArtistId
-            : artistsData[0]?.id || null;
-          setSelectedArtistId(targetId);
-
-          if (targetId) {
-            const [b, p] = await Promise.all([
-              api.get<BookingListItem[]>(`/api/bookings?artistId=${targetId}`),
-              api.get<PromoterWithCount[]>(`/api/promoters?artistId=${targetId}`),
-            ]);
-            setBookings(b);
-            // Map bookingsCount to _count for compatibility
-            setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
-          }
         } else {
           const [b, p] = await Promise.all([
             api.get<BookingListItem[]>("/api/bookings"),
@@ -98,27 +82,7 @@ function HomeContent() {
     }
 
     loadData();
-  }, [user, isBooker, searchParams]);
-
-  // Reload when artist changes
-  useEffect(() => {
-    if (!isBooker || !selectedArtistId || !user) return;
-
-    async function loadArtistData() {
-      try {
-        const [b, p] = await Promise.all([
-          api.get<BookingListItem[]>(`/api/bookings?artistId=${selectedArtistId}`),
-          api.get<PromoterWithCount[]>(`/api/promoters?artistId=${selectedArtistId}`),
-        ]);
-        setBookings(b);
-        setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
-      } catch (err) {
-        console.error("Failed to load artist data:", err);
-      }
-    }
-
-    loadArtistData();
-  }, [selectedArtistId, isBooker, user]);
+  }, [user, isBooker]);
 
   async function handleAddArtist(e: React.FormEvent) {
     e.preventDefault();
@@ -148,7 +112,7 @@ function HomeContent() {
   if (dataLoading) {
     return (
       <div className="min-h-screen">
-        <HeaderBar user={user} isBooker={isBooker} artists={artists} selectedArtistId={selectedArtistId} onLogout={logout} />
+        <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
         <div className="flex items-center justify-center py-20">
           <div className="text-gray-400">Chargement des donnees...</div>
         </div>
@@ -160,7 +124,7 @@ function HomeContent() {
   if (isBooker && artists.length === 0) {
     return (
       <div className="min-h-screen">
-        <HeaderBar user={user} isBooker={isBooker} artists={[]} selectedArtistId={null} onLogout={logout} />
+        <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="text-center py-20">
             <div className="text-5xl mb-4">🎵</div>
@@ -191,27 +155,20 @@ function HomeContent() {
     );
   }
 
-  const selectedArtist = isBooker ? artists.find(a => a.id === selectedArtistId) : null;
-
   return (
     <div className="min-h-screen">
-      <HeaderBar user={user} isBooker={isBooker} artists={artists} selectedArtistId={selectedArtistId} onLogout={logout} />
-
-      {isBooker && selectedArtist && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4">
-          <div className="text-sm text-gray-400">
-            Artiste : <span className="text-white font-medium">{selectedArtist.artistName || selectedArtist.name || selectedArtist.email}</span>
-          </div>
-        </div>
-      )}
+      <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Dashboard
-          initialBookings={bookings}
-          initialPromoters={promoters}
-          role={user.role as "artist" | "booker"}
-          artistId={isBooker ? selectedArtistId! : undefined}
-        />
+        {isBooker ? (
+          <BookerDashboard artists={artists} />
+        ) : (
+          <Dashboard
+            initialBookings={bookings}
+            initialPromoters={promoters}
+            role="artist"
+          />
+        )}
       </main>
     </div>
   );
@@ -220,14 +177,10 @@ function HomeContent() {
 function HeaderBar({
   user,
   isBooker,
-  artists,
-  selectedArtistId,
   onLogout,
 }: {
   user: { name: string | null; email: string; role: string | null };
   isBooker: boolean;
-  artists: Artist[];
-  selectedArtistId: string | null;
   onLogout: () => void;
 }) {
   return (
@@ -243,18 +196,11 @@ function HeaderBar({
           )}
         </div>
         <div className="flex items-center gap-4">
-          {isBooker && artists.length > 0 && selectedArtistId && (
-            <ArtistSelector
-              artists={artists.map(a => ({
-                id: a.id,
-                label: a.artistName || a.name || a.email,
-              }))}
-              selectedId={selectedArtistId}
-            />
+          {!isBooker && (
+            <Link href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+              Configuration
+            </Link>
           )}
-          <Link href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
-            Configuration
-          </Link>
           <span className="text-sm text-gray-400">{user.name || user.email}</span>
           <button
             onClick={onLogout}

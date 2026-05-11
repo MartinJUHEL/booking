@@ -65,6 +65,25 @@ export interface BookingListItem {
   status: string;
 }
 
+export interface DashboardBookingItem extends BookingListItem {
+  artistId: string;
+  artistName: string;
+}
+
+export interface DashboardResponse {
+  items: DashboardBookingItem[];
+  year: number;
+  availableYears: number[];
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface Booking {
   id: string;
   date: string;

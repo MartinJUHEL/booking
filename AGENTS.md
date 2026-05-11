@@ -33,18 +33,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/login/page.tsx` | Google login with GIS |
 | `src/app/onboarding/` | Role selection (artist/booker) |
 | `src/app/settings/` | Google Calendar settings |
-| `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs + booking/promoter detail panels |
+| `src/components/Dashboard.tsx` | Artist dashboard: Table / Calendar / Promoters tabs + booking/promoter detail panels |
+| `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields, transport legs, ticket upload |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
-| `src/components/CalendarView.tsx` | Monthly calendar view |
-| `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists |
+| `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
+| `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
 | `src/components/PromoterList.tsx` | Promoter cards grid view (clickable to open detail panel) |
 | `src/components/PromoterDetail.tsx` | Side panel showing promoter details with copy-to-clipboard on each field |
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
-| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, Booking, Hotel, Transport, TransportLeg, Promoter) |
+| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
 
@@ -71,6 +72,18 @@ interface BookingListItem {
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
 The full `Booking` interface extends the list fields with: `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`.
+
+### DashboardBookingItem (booker dashboard, extends BookingListItem)
+Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
+
+### DashboardResponse
+```ts
+interface DashboardResponse {
+  items: DashboardBookingItem[];
+  year: number;
+  availableYears: number[];
+}
+```
 
 ### Hotel (nested object in Booking)
 ```ts
@@ -115,11 +128,13 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - Standard dashboard with Table / Calendar / Promoters tabs
 
 ### Booker
-- Manages multiple artists via API
-- Artist selector in header to switch between artists
-- Views/creates bookings and promoters on behalf of the selected artist
+- **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)
+- **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
+- **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
+- Clicking a booking opens `BookingDetail` side panel
 - Adds artists by email (artist must have an account with role "artist")
 - Can send advancing form links to promoters and validate sent fields one by one
+- **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`
 - `/onboarding` page for first-time role selection
 
 ## Booking List/Detail Pattern

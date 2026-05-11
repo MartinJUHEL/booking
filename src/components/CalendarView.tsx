@@ -9,12 +9,14 @@ const MONTHS = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 
-export default function CalendarView({
+export default function CalendarView<T extends BookingListItem>({
   bookings,
   onSelect,
+  renderLabel,
 }: {
-  bookings: BookingListItem[];
-  onSelect: (b: BookingListItem) => void;
+  bookings: T[];
+  onSelect: (b: T) => void;
+  renderLabel?: (b: T) => string;
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -27,7 +29,7 @@ export default function CalendarView({
     const startOffset = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const cells: { day: number; bookings: BookingListItem[] }[] = [];
+    const cells: { day: number; bookings: T[] }[] = [];
 
     for (let i = 0; i < startOffset; i++) {
       cells.push({ day: 0, bookings: [] });
@@ -115,7 +117,7 @@ export default function CalendarView({
                           : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
                     }`}
                   >
-                    {b.venue} - {b.city}
+                    {renderLabel ? renderLabel(b) : `${b.venue} - ${b.city}`}
                   </button>
                 ))}
               </>

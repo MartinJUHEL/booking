@@ -14,6 +14,9 @@ export default function SettingsPage() {
     if (!loading && !user) {
       router.replace("/login");
     }
+    if (!loading && user?.role === "booker") {
+      router.replace("/");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user]);
 
