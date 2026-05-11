@@ -10,9 +10,10 @@ interface Props {
   promoters: PromoterWithCount[];
   onEdit: (promoter: Promoter) => void;
   onDelete: (id: string) => void;
+  onSelect: (promoter: PromoterWithCount) => void;
 }
 
-export default function PromoterList({ promoters, onEdit, onDelete }: Props) {
+export default function PromoterList({ promoters, onEdit, onDelete, onSelect }: Props) {
   if (promoters.length === 0) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -27,7 +28,8 @@ export default function PromoterList({ promoters, onEdit, onDelete }: Props) {
       {promoters.map((p) => (
         <div
           key={p.id}
-          className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 hover:border-gray-700 transition-colors"
+          className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 hover:border-gray-700 transition-colors cursor-pointer"
+          onClick={() => onSelect(p)}
         >
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -66,13 +68,13 @@ export default function PromoterList({ promoters, onEdit, onDelete }: Props) {
 
           <div className="flex gap-2 mt-4">
             <button
-              onClick={() => onEdit(p)}
+              onClick={(e) => { e.stopPropagation(); onEdit(p); }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
             >
               Modifier
             </button>
             <button
-              onClick={() => onDelete(p.id)}
+              onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
               className="text-xs text-red-400 hover:text-red-300 transition-colors"
             >
               Supprimer

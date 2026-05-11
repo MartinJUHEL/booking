@@ -7,6 +7,7 @@ import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
 import PromoterList from "./PromoterList";
 import PromoterForm from "./PromoterForm";
+import PromoterDetail from "./PromoterDetail";
 import type { Booking, BookingListItem, Promoter } from "./types";
 import { api } from "@/lib/api-client";
 
@@ -35,6 +36,7 @@ export default function Dashboard({
   const [showPromoterForm, setShowPromoterForm] = useState(false);
   const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [selectedPromoter, setSelectedPromoter] = useState<PromoterWithCount | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -257,6 +259,7 @@ export default function Dashboard({
           promoters={promoters}
           onEdit={handleEditPromoter}
           onDelete={handleDeletePromoter}
+          onSelect={(p) => setSelectedPromoter(p)}
         />
       )}
 
@@ -297,6 +300,18 @@ export default function Dashboard({
           onEdit={(b) => {
             setSelectedBookingId(null);
             handleEdit(b);
+          }}
+        />
+      )}
+
+      {/* Promoter Detail Panel */}
+      {selectedPromoter && (
+        <PromoterDetail
+          promoter={selectedPromoter}
+          onClose={() => setSelectedPromoter(null)}
+          onEdit={(p) => {
+            setSelectedPromoter(null);
+            handleEditPromoter(p);
           }}
         />
       )}

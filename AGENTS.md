@@ -33,14 +33,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/login/page.tsx` | Google login with GIS |
 | `src/app/onboarding/` | Role selection (artist/booker) |
 | `src/app/settings/` | Google Calendar settings |
-| `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs + booking detail panel |
+| `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs + booking/promoter detail panels |
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields, transport legs, ticket upload |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
 | `src/components/CalendarView.tsx` | Monthly calendar view |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
-| `src/components/PromoterList.tsx` | Promoter cards grid view |
+| `src/components/PromoterList.tsx` | Promoter cards grid view (clickable to open detail panel) |
+| `src/components/PromoterDetail.tsx` | Side panel showing promoter details with copy-to-clipboard on each field |
 | `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
@@ -136,6 +137,16 @@ Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) w
 - Notes
 
 The panel has a "Modifier" button to open the edit form.
+
+## Promoter Detail Panel
+
+Clicking a promoter card in `PromoterList` opens a slide-in side panel (`PromoterDetail`) which displays all promoter fields organized in sections:
+- **Contact**: name, company, email, phone
+- **Legal info**: headquarters, SIRET, APE, VAT number
+- **Signatory**: name and role
+- **Notes** and **Statistics** (booking count)
+
+Each field has a **click-to-copy** feature for easy use in invoices/contracts. The panel has a "Modifier" button to open the edit form.
 
 ## Environment Variables
 
