@@ -1,4 +1,4 @@
-# DJ Booking Manager - Web App
+# Gigflow - Web App
 
 ## Setup local
 

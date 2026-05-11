@@ -37,8 +37,7 @@ export default function SettingsPage() {
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🎧</span>
-            <h1 className="text-xl font-bold">DJ Booking Manager</h1>
+            <h1 className="text-xl font-bold">Gigflow</h1>
           </div>
           <div className="flex items-center gap-4">
             <Link

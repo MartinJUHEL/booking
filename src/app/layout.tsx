@@ -3,7 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
-  title: "DJ Booking Manager",
+  title: "Gigflow",
   description: "Gérez vos dates, contrats et logistique",
 };
 

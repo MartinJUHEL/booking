@@ -32,7 +32,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-lg w-full mx-4">
-        <span className="text-5xl block mb-4 text-center">🎧</span>
+        <div className="text-center mb-4"><span className="text-2xl font-bold">Gigflow</span></div>
         <h1 className="text-2xl font-bold mb-2 text-center">
           Bienvenue, {userName} !
         </h1>
