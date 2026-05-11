@@ -221,7 +221,7 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 
 ## Important Notes
 
-- **No backend code in this repo** — all API routes, database, auth validation are in the `BookingApi/` repo
+- **No backend code in this repo** — all API routes, database, auth validation are in the `booking-api` repo
 - **All pages are client components** — no server components with data fetching
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
 - **File uploads** use `api.upload()` (multipart/form-data with JWT auth)
@@ -230,3 +230,25 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
 - **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
 - **Advancing review** is only visible to bookers — the `BookingDetail` component receives a `role` prop and conditionally renders the `AdvancingReview` component
+
+## Deployment
+
+### Vercel (Production & Preview)
+
+- **Platform**: Vercel (https://vercel.com)
+- **Config**: `vercel.json` — Next.js framework, npm build
+- **Preview environments**: automatic — every PR creates a unique preview URL
+- **GitHub integration**: connect the `booking` repo in Vercel dashboard, set root directory to repo root
+
+### Environment Variables (Vercel)
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL (Railway production URL for prod, staging URL for previews) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth Client ID (for GIS login button) |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `vercel.json` | Vercel deployment config (Next.js framework, build command, output directory) |
