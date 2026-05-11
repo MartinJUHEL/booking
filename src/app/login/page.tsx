@@ -124,7 +124,7 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  const handleGoogleCallbackRef = useRef<(response: { credential: string }) => void>();
+  const handleGoogleCallbackRef = useRef<(response: { credential: string }) => void>(undefined);
   handleGoogleCallbackRef.current = async (response: { credential: string }) => {
     setError("");
     const success = await login(response.credential);
