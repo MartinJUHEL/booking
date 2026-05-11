@@ -86,7 +86,7 @@ export default function LoginPage() {
       if (cancelled || !window.google || !googleBtnRef.current) return;
 
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: clientId!,
         callback: (res: { credential: string }) => handleGoogleCallbackRef.current?.(res),
         auto_select: false,
       });
