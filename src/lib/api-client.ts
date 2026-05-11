@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5062";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5160";
 
 class ApiClient {
   /** @deprecated kept for backward compat during migration — no longer stores JWT */

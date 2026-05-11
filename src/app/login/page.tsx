@@ -74,35 +74,48 @@ export default function LoginPage() {
   }, [loading, user]);
 
   useEffect(() => {
-    // Load Google Identity Services
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.onload = () => {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId || !window.google) return;
+    // Don't try to render while the auth state is loading (the form is not mounted yet)
+    if (loading) return;
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) return;
+
+    let cancelled = false;
+
+    function renderGoogleButton() {
+      if (cancelled || !window.google || !googleBtnRef.current) return;
 
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: handleGoogleCallback,
+        callback: (res: { credential: string }) => handleGoogleCallbackRef.current?.(res),
         auto_select: false,
       });
 
-      if (googleBtnRef.current) {
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: "outline",
-          size: "large",
-          width: 350,
-          text: "signin_with",
-        });
-      }
-    };
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "outline",
+        size: "large",
+        width: 350,
+        text: "signin_with",
+      });
+    }
+
+    // If the script is already loaded, just render
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return;
+    }
+
+    // Otherwise load the script
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = renderGoogleButton;
     document.head.appendChild(script);
 
     return () => {
-      document.head.removeChild(script);
+      cancelled = true;
     };
-  }, []);
+  }, [loading]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -111,7 +124,8 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  async function handleGoogleCallback(response: { credential: string }) {
+  const handleGoogleCallbackRef = useRef<(response: { credential: string }) => void>();
+  handleGoogleCallbackRef.current = async (response: { credential: string }) => {
     setError("");
     const success = await login(response.credential);
     if (success) {
@@ -119,7 +133,7 @@ export default function LoginPage() {
     } else {
       setError("Echec de la connexion. Verifiez que le backend est accessible.");
     }
-  }
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
