@@ -27,21 +27,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 | File | Purpose |
 |------|---------|
-| `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, JWT management) |
+| `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, JWT management, file upload/download) |
 | `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook (login, logout, refreshUser) |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Google login with GIS |
 | `src/app/onboarding/` | Role selection (artist/booker) |
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Table / Calendar / Promoters tabs + booking detail panel |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields + Places autocomplete |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields, transport legs, ticket upload |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
-| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport, checklist) |
+| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
 | `src/components/CalendarView.tsx` | Monthly calendar view |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
 | `src/components/PromoterList.tsx` | Promoter cards grid view |
-| `src/components/types.ts` | Shared TypeScript interfaces (Booking, Hotel, Promoter) |
+| `src/components/types.ts` | Shared TypeScript interfaces (Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
 
@@ -57,7 +57,27 @@ interface Hotel {
 }
 ```
 
-`Booking.hotel` is a nested object (not flat fields). The backend returns it as `{ hotel: { booked, name, ... } }`.
+### TransportLeg (nested in Transport)
+```ts
+interface TransportLeg {
+  id?: string;
+  order: number;
+  mode: string | null; // plane, train, bus, car, taxi, ferry, other
+  departureLocation: string | null;
+  arrivalLocation: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  bookingReference: string | null;
+  carrier: string | null;
+  notes: string | null;
+  ticketFileName: string | null;    // stored file (UUID.ext)
+  ticketOriginalName: string | null; // original upload name
+}
+```
+
+`Booking.transports` is an array of `Transport` (typically outbound + return), each with ordered `legs`.
+
+Ticket upload uses `api.upload()` (multipart) to `POST /api/transport-legs/{id}/ticket`. Download uses `api.downloadFile()` (fetch + blob URL to pass JWT auth). Legs must be saved (have an `id`) before a ticket can be uploaded.
 
 Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Google Places API).
 
@@ -79,7 +99,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) showing:
 - Event info (date, venue, city, promoter, status, fee)
 - **Hotel/lodging** (name, address with Google Maps link, booking number, breakfast/late checkout tags)
-- Transport info
+- **Transport** info with ticket download links
 - Checklist (contract, fees)
 - Notes
 
@@ -97,5 +117,7 @@ The panel has a "Modifier" button to open the edit form.
 - **No backend code in this repo** — all API routes, database, auth validation are in the `BookingApi/` repo
 - **All pages are client components** — no server components with data fetching
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
+- **File uploads** use `api.upload()` (multipart/form-data with JWT auth)
+- **File downloads** use `api.downloadFile()` (fetch + blob URL to pass JWT auth, not plain `<a href>`)
 - **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
