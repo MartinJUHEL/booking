@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Booking } from "./types";
+import type { BookingListItem } from "./types";
 
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const MONTHS = [
@@ -11,10 +11,10 @@ const MONTHS = [
 
 export default function CalendarView({
   bookings,
-  onEdit,
+  onSelect,
 }: {
-  bookings: Booking[];
-  onEdit: (b: Booking) => void;
+  bookings: BookingListItem[];
+  onSelect: (b: BookingListItem) => void;
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -27,7 +27,7 @@ export default function CalendarView({
     const startOffset = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const cells: { day: number; bookings: Booking[] }[] = [];
+    const cells: { day: number; bookings: BookingListItem[] }[] = [];
 
     for (let i = 0; i < startOffset; i++) {
       cells.push({ day: 0, bookings: [] });
@@ -106,7 +106,7 @@ export default function CalendarView({
                 {cell.bookings.map((b) => (
                   <button
                     key={b.id}
-                    onClick={() => onEdit(b)}
+                    onClick={() => onSelect(b)}
                     className={`w-full text-left text-xs px-2 py-1 rounded mb-1 truncate transition-colors ${
                       b.status === "confirmed"
                         ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"

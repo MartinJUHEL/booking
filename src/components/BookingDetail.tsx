@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Booking } from "./types";
 import { api } from "@/lib/api-client";
 
@@ -16,14 +17,49 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function BookingDetail({
-  booking,
+  bookingId,
   onClose,
   onEdit,
 }: {
-  booking: Booking;
+  bookingId: string;
   onClose: () => void;
   onEdit: (b: Booking) => void;
 }) {
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+    api.get<Booking>(`/api/bookings/${bookingId}`)
+      .then(setBooking)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [bookingId]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-60 flex justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative w-full max-w-md bg-gray-900 border-l border-gray-800 h-full flex items-center justify-center animate-slide-in">
+          <div className="text-gray-400">Chargement...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="fixed inset-0 z-60 flex justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative w-full max-w-md bg-gray-900 border-l border-gray-800 h-full flex items-center justify-center animate-slide-in">
+          <div className="text-red-400">Erreur lors du chargement</div>
+        </div>
+      </div>
+    );
+  }
+
   const dateStr = new Date(booking.date).toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "2-digit",
@@ -32,7 +68,7 @@ export default function BookingDetail({
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
+    <div className="fixed inset-0 z-60 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md bg-gray-900 border-l border-gray-800 h-full overflow-y-auto animate-slide-in">
         {/* Header */}

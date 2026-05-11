@@ -41,9 +41,33 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
 | `src/components/PromoterList.tsx` | Promoter cards grid view |
-| `src/components/types.ts` | Shared TypeScript interfaces (Booking, Hotel, Transport, TransportLeg, Promoter) |
+| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
+
+### BookingListItem (used for list/table/calendar views)
+```ts
+interface BookingListItem {
+  id: string;
+  date: string;
+  time: string | null;
+  promoter: string;
+  promoterId: string | null;
+  venue: string;
+  city: string;
+  country: string;
+  fee: number;
+  contractSigned: boolean;
+  agencyFeesPaid: boolean;
+  artistFeesPaid: boolean;
+  hotelBooked: boolean;
+  transportBooked: boolean;
+  status: string;
+}
+```
+
+### Booking (full detail, fetched via `GET /api/bookings/{id}`)
+The full `Booking` interface extends the list fields with: `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`.
 
 ### Hotel (nested object in Booking)
 ```ts
@@ -94,9 +118,17 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - Adds artists by email (artist must have an account with role "artist")
 - `/onboarding` page for first-time role selection
 
+## Booking List/Detail Pattern
+
+The frontend uses a list/detail split to minimize API payload:
+
+- **List**: `page.tsx` fetches `BookingListItem[]` from `GET /api/bookings` (lightweight DTO). This data is passed to `Dashboard`, `BookingTable`, and `CalendarView`.
+- **Detail**: clicking a booking row or calendar event opens `BookingDetail`, which receives a `bookingId` and fetches the full `Booking` from `GET /api/bookings/{id}`. The detail panel has a "Modifier" button that passes the full `Booking` to `BookingForm` for editing.
+- **Quick actions**: the `BookingTable` has clickable toggle buttons on "Fees Ag." and "Fees Art." columns. Clicking them calls `PUT /api/bookings/{id}` with only the toggled field (`agencyFeesPaid` or `artistFeesPaid`) and updates the list state optimistically.
+
 ## Booking Detail Panel
 
-Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) showing:
+Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) which fetches the full booking detail from `GET /api/bookings/{id}`. It shows:
 - Event info (date, venue, city, promoter, status, fee)
 - **Hotel/lodging** (name, address with Google Maps link, booking number, breakfast/late checkout tags)
 - **Transport** info with ticket download links

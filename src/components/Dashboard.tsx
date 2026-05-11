@@ -7,7 +7,7 @@ import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
 import PromoterList from "./PromoterList";
 import PromoterForm from "./PromoterForm";
-import type { Booking, Promoter } from "./types";
+import type { Booking, BookingListItem, Promoter } from "./types";
 import { api } from "@/lib/api-client";
 
 type ViewMode = "table" | "calendar" | "promoters";
@@ -22,19 +22,19 @@ export default function Dashboard({
   role = "artist",
   artistId,
 }: {
-  initialBookings: Booking[];
+  initialBookings: BookingListItem[];
   initialPromoters: PromoterWithCount[];
   role?: "artist" | "booker";
   artistId?: string;
 }) {
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [bookings, setBookings] = useState<BookingListItem[]>(initialBookings);
   const [promoters, setPromoters] = useState<PromoterWithCount[]>(initialPromoters);
   const [view, setView] = useState<ViewMode>("table");
   const [showForm, setShowForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [showPromoterForm, setShowPromoterForm] = useState(false);
   const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -68,10 +68,14 @@ export default function Dashboard({
       setBookings((prev) =>
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
-      setSelectedBooking((prev) => prev?.id === updated.id ? { ...prev, ...updated } : prev);
+      // Refresh detail panel if open
+      if (selectedBookingId === updated.id) {
+        setSelectedBookingId(null);
+        setTimeout(() => setSelectedBookingId(updated.id), 0);
+      }
     } else {
       const payload = artistId ? { ...data, artistId } : data;
-      const created = await api.post<Booking>("/api/bookings", payload);
+      const created = await api.post<BookingListItem>("/api/bookings", payload);
       setBookings((prev) => [...prev, created].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       ));
@@ -86,9 +90,29 @@ export default function Dashboard({
     setBookings((prev) => prev.filter((b) => b.id !== id));
   }
 
+  async function handleToggleField(id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) {
+    try {
+      await api.put(`/api/bookings/${id}`, { [field]: value });
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
+      );
+    } catch (err) {
+      console.error("Failed to update booking:", err);
+    }
+  }
+
   function handleEdit(booking: Booking) {
     setEditingBooking(booking);
     setShowForm(true);
+  }
+
+  async function handleEditById(id: string) {
+    try {
+      const booking = await api.get<Booking>(`/api/bookings/${id}`);
+      handleEdit(booking);
+    } catch (err) {
+      console.error("Failed to load booking for editing:", err);
+    }
   }
 
   // Promoter CRUD
@@ -221,12 +245,13 @@ export default function Dashboard({
       {view === "table" ? (
         <BookingTable
           bookings={filtered}
-          onEdit={handleEdit}
+          onEdit={handleEditById}
           onDelete={handleDelete}
-          onSelect={(b) => setSelectedBooking(b)}
+          onSelect={(b) => setSelectedBookingId(b.id)}
+          onToggleField={handleToggleField}
         />
       ) : view === "calendar" ? (
-        <CalendarView bookings={filtered} onEdit={handleEdit} />
+        <CalendarView bookings={filtered} onSelect={(b) => setSelectedBookingId(b.id)} />
       ) : (
         <PromoterList
           promoters={promoters}
@@ -265,12 +290,12 @@ export default function Dashboard({
       )}
 
       {/* Booking Detail Panel */}
-      {selectedBooking && (
+      {selectedBookingId && (
         <BookingDetail
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
+          bookingId={selectedBookingId}
+          onClose={() => setSelectedBookingId(null)}
           onEdit={(b) => {
-            setSelectedBooking(null);
+            setSelectedBookingId(null);
             handleEdit(b);
           }}
         />

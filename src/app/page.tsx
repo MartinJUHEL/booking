@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
 import ArtistSelector from "@/components/ArtistSelector";
-import type { Booking, Promoter } from "@/components/types";
+import type { BookingListItem, Promoter } from "@/components/types";
 
 interface Artist {
   id: string;
@@ -35,7 +35,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
 
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
   const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -75,7 +75,7 @@ function HomeContent() {
 
           if (targetId) {
             const [b, p] = await Promise.all([
-              api.get<Booking[]>(`/api/bookings?artistId=${targetId}`),
+              api.get<BookingListItem[]>(`/api/bookings?artistId=${targetId}`),
               api.get<PromoterWithCount[]>(`/api/promoters?artistId=${targetId}`),
             ]);
             setBookings(b);
@@ -84,7 +84,7 @@ function HomeContent() {
           }
         } else {
           const [b, p] = await Promise.all([
-            api.get<Booking[]>("/api/bookings"),
+            api.get<BookingListItem[]>("/api/bookings"),
             api.get<PromoterWithCount[]>("/api/promoters"),
           ]);
           setBookings(b);
@@ -107,7 +107,7 @@ function HomeContent() {
     async function loadArtistData() {
       try {
         const [b, p] = await Promise.all([
-          api.get<Booking[]>(`/api/bookings?artistId=${selectedArtistId}`),
+          api.get<BookingListItem[]>(`/api/bookings?artistId=${selectedArtistId}`),
           api.get<PromoterWithCount[]>(`/api/promoters?artistId=${selectedArtistId}`),
         ]);
         setBookings(b);

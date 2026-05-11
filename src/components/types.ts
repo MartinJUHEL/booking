@@ -47,6 +47,24 @@ export interface Transport {
   legs: TransportLeg[];
 }
 
+export interface BookingListItem {
+  id: string;
+  date: string;
+  time: string | null;
+  promoter: string;
+  promoterId: string | null;
+  venue: string;
+  city: string;
+  country: string;
+  fee: number;
+  contractSigned: boolean;
+  agencyFeesPaid: boolean;
+  artistFeesPaid: boolean;
+  hotelBooked: boolean;
+  transportBooked: boolean;
+  status: string;
+}
+
 export interface Booking {
   id: string;
   date: string;

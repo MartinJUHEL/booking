@@ -1,6 +1,6 @@
 "use client";
 
-import type { Booking } from "./types";
+import type { BookingListItem } from "./types";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -14,7 +14,22 @@ const statusLabels: Record<string, string> = {
   cancelled: "Annulé",
 };
 
-function Check({ checked }: { checked: boolean }) {
+function Check({ checked, onClick }: { checked: boolean; onClick?: () => void }) {
+  if (onClick) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`inline-block w-5 h-5 rounded text-center text-xs leading-5 transition-colors ${
+          checked
+            ? "bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400"
+            : "bg-gray-800 text-gray-600 hover:bg-green-500/10 hover:text-green-500"
+        }`}
+        title={checked ? "Marquer comme non payé" : "Marquer comme payé"}
+      >
+        {checked ? "✓" : "–"}
+      </button>
+    );
+  }
   return (
     <span
       className={`inline-block w-5 h-5 rounded text-center text-xs leading-5 ${
@@ -33,11 +48,13 @@ export default function BookingTable({
   onEdit,
   onDelete,
   onSelect,
+  onToggleField,
 }: {
-  bookings: Booking[];
-  onEdit: (b: Booking) => void;
+  bookings: BookingListItem[];
+  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onSelect?: (b: Booking) => void;
+  onSelect?: (b: BookingListItem) => void;
+  onToggleField?: (id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) => void;
 }) {
   if (bookings.length === 0) {
     return (
@@ -112,20 +129,20 @@ export default function BookingTable({
                   <Check checked={b.contractSigned} />
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <Check checked={b.agencyFeesPaid} />
+                  <Check checked={b.agencyFeesPaid} onClick={onToggleField ? () => onToggleField(b.id, "agencyFeesPaid", !b.agencyFeesPaid) : undefined} />
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <Check checked={b.artistFeesPaid} />
+                  <Check checked={b.artistFeesPaid} onClick={onToggleField ? () => onToggleField(b.id, "artistFeesPaid", !b.artistFeesPaid) : undefined} />
                 </td>
-                <td className="px-4 py-3 text-center" title={b.transports?.some(t => t.booked) ? `${b.transports.filter(t => t.booked).length} transport(s)` : ""}>
-                  <Check checked={b.transports?.some(t => t.booked) ?? false} />
+                <td className="px-4 py-3 text-center">
+                  <Check checked={b.transportBooked} />
                 </td>
-                <td className="px-4 py-3 text-center" title={b.hotel?.name || ""}>
-                  <Check checked={b.hotel?.booked ?? false} />
+                <td className="px-4 py-3 text-center">
+                  <Check checked={b.hotelBooked} />
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(b); }}
+                    onClick={(e) => { e.stopPropagation(); onEdit(b.id); }}
                     className="text-gray-500 hover:text-purple-400 transition-colors mr-2"
                   >
                     Modifier
