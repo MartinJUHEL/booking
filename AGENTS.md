@@ -55,6 +55,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/PromoterDetail.tsx` | Side panel showing promoter details with copy-to-clipboard on each field |
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
+| `src/app/invitations/[token]/page.tsx` | Booker invitation accept/reject page (artist clicks email link, authenticates, accepts or rejects) |
 | `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter) |
 
 ## Data Model (TypeScript)
@@ -136,13 +137,16 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 ### Artist
 - Sees only their own bookings and promoters
 - Standard dashboard with Table / Calendar / Promoters tabs
+- **Pending booker invitations** shown as a banner above the dashboard with Accept/Reject buttons
+- **My bookers** section: shows linked bookers as chips with a remove button (`DELETE /api/artists/bookers/{bookerId}`)
 
 ### Booker
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)
 - **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
-- Adds artists by email (artist must have an account with role "artist")
+- **Invites artists by email** (sends invitation, artist must accept) — no longer adds directly
+- **Artist chips** with remove button (`×`) to sever the link
 - Can send advancing form links to promoters and validate sent fields one by one
 - **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`
 - `/onboarding` page for first-time role selection
@@ -222,7 +226,7 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
 - **File uploads** use `api.upload()` (multipart/form-data with JWT auth)
 - **File downloads** use `api.downloadFile()` (fetch + blob URL to pass JWT auth, not plain `<a href>`)
-- **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role
+- **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role. Invitation page (`/invitations/[token]`) stores redirect URL in `localStorage` so the artist returns to the invitation after login.
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
 - **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
 - **Advancing review** is only visible to bookers — the `BookingDetail` component receives a `role` prop and conditionally renders the `AdvancingReview` component

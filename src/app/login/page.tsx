@@ -25,7 +25,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(user.role ? "/" : "/onboarding");
+      const redirect = typeof window !== "undefined" ? localStorage.getItem("redirectAfterLogin") : null;
+      if (redirect) {
+        localStorage.removeItem("redirectAfterLogin");
+        router.replace(redirect);
+      } else {
+        router.replace(user.role ? "/" : "/onboarding");
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user]);
