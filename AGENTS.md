@@ -10,12 +10,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **Framework**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Backend**: External ASP.NET Core 8 API (separate repo: `BookingApi/`)
-- **Auth**: Google Identity Services (client-side) + JWT stored in localStorage
+- **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + JWT stored in localStorage
 - **API Client**: `src/lib/api-client.ts` — centralized HTTP client with JWT auth
 - **Roles**: Artist / Booker (chosen at onboarding)
 
 ## How Auth Works
 
+### Google OAuth
 1. Login page uses Google Identity Services (GIS) button
 2. Google returns an `idToken` (credential)
 3. Frontend sends it to `POST /api/auth/google` on the backend
@@ -23,14 +24,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
 5. `AuthProvider` (`src/lib/auth-context.tsx`) manages user state + provides `useAuth()` hook
 6. All API calls attach `Authorization: Bearer <jwt>` via `api-client.ts`
 
+### Email/Password
+1. User fills in email/password (+ optional name) on login page → `POST /api/auth/register`
+2. Backend creates user, sends 6-digit verification code via email
+3. Frontend shows verification code input screen (6-digit, monospace, auto-focus)
+4. User enters code → `POST /api/auth/verify-email` → backend returns JWT → redirect to `/onboarding`
+5. Subsequent logins via `POST /api/auth/login` → if email unverified, backend returns 403 + auto-resends code → frontend redirects to verification screen
+6. "Resend code" button with 120s cooldown timer
+7. Login page toggles between "Se connecter" and "S'inscrire" modes
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, JWT management, file upload/download) |
-| `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook (login, logout, refreshUser) |
+| `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook (login, loginWithCredentials, register, verifyEmail, resendCode, logout, refreshUser) |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
-| `src/app/login/page.tsx` | Google login with GIS |
+| `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
 | `src/app/onboarding/` | Role selection (artist/booker) |
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Artist dashboard: Table / Calendar / Promoters tabs + booking/promoter detail panels |
