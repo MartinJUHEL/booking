@@ -1,46 +1,42 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5062";
 
 class ApiClient {
-  private getToken(): string | null {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("jwt_token");
+  /** @deprecated kept for backward compat during migration — no longer stores JWT */
+  setToken(_token: string) {
+    // JWT is now managed via httpOnly cookie set by the backend
+    // Clean up any legacy localStorage token
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jwt_token");
+    }
   }
 
-  setToken(token: string) {
-    localStorage.setItem("jwt_token", token);
-  }
-
+  /** @deprecated kept for backward compat during migration */
   clearToken() {
-    localStorage.removeItem("jwt_token");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jwt_token");
+    }
   }
 
+  /** Auth state is now determined by calling /api/user/me (cookie-based) */
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    // Cannot check httpOnly cookie from JS — always return true,
+    // actual auth is verified server-side on each request
+    return true;
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const token = this.getToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
     };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     const res = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers,
+      credentials: "include",
     });
 
     if (res.status === 401) {
-      // Only clear token if the auth check itself failed (user/me)
-      // For other endpoints, the 401 might mean an external token expired
-      // (e.g. Google Calendar), not the user's session
-      if (path === "/api/user/me" || path === "/api/auth/google") {
-        this.clearToken();
-      }
       throw new Error("Unauthorized");
     }
 
@@ -77,20 +73,14 @@ class ApiClient {
   }
 
   async upload<T>(path: string, file: File): Promise<T> {
-    const token = this.getToken();
     const formData = new FormData();
     formData.append("file", file);
 
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
     // Do NOT set Content-Type — browser sets it with boundary for multipart
-
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers,
       body: formData,
+      credentials: "include",
     });
 
     if (res.status === 401) {
@@ -110,13 +100,9 @@ class ApiClient {
   }
 
   async downloadFile(path: string, fileName: string): Promise<void> {
-    const token = this.getToken();
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(`${API_BASE_URL}${path}`, { headers });
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+    });
     if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
 
     const blob = await res.blob();

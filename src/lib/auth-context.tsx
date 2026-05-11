@@ -41,17 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    if (!api.isAuthenticated()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     try {
       const userData = await api.get<User>("/api/user/me");
       setUser(userData);
     } catch {
       setUser(null);
-      api.clearToken();
     } finally {
       setLoading(false);
     }
@@ -68,13 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     expiresAt?: number
   ): Promise<boolean> {
     try {
-      const res = await api.post<{ token: string; user: User }>("/api/auth/google", {
+      const res = await api.post<{ user: User }>("/api/auth/google", {
         idToken,
         accessToken,
         refreshToken,
         expiresAt,
       });
-      api.setToken(res.token);
       setUser(res.user);
       return true;
     } catch {
@@ -82,8 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function logout() {
-    api.clearToken();
+  async function logout() {
+    try {
+      await api.post("/api/auth/logout");
+    } catch {
+      // Best effort — cookie might already be expired
+    }
     setUser(null);
     window.location.href = "/login";
   }
@@ -93,11 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<{ success: boolean; error?: string; needsVerification?: boolean; email?: string }> {
     try {
-      const res = await api.post<{ token: string; user: User }>("/api/auth/login", {
+      const res = await api.post<{ user: User }>("/api/auth/login", {
         email,
         password,
       });
-      api.setToken(res.token);
       setUser(res.user);
       return { success: true };
     } catch (e: unknown) {
@@ -133,11 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     code: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const res = await api.post<{ token: string; user: User }>("/api/auth/verify-email", {
+      const res = await api.post<{ user: User }>("/api/auth/verify-email", {
         email,
         code,
       });
-      api.setToken(res.token);
       setUser(res.user);
       return { success: true };
     } catch (e: unknown) {

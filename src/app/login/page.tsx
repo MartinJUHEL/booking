@@ -6,6 +6,43 @@ import { useAuth } from "@/lib/auth-context";
 
 type Step = "form" | "verify";
 
+interface PasswordStrength {
+  score: number; // 0-4
+  label: string;
+  color: string;
+  checks: {
+    minLength: boolean;
+    hasUpper: boolean;
+    hasLower: boolean;
+    hasDigit: boolean;
+    hasSpecial: boolean;
+  };
+}
+
+function getPasswordStrength(password: string): PasswordStrength {
+  const checks = {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasDigit: /\d/.test(password),
+    hasSpecial: /[^A-Za-z0-9]/.test(password),
+  };
+  const score = Object.values(checks).filter(Boolean).length;
+  const levels: { label: string; color: string }[] = [
+    { label: "Tres faible", color: "bg-red-500" },
+    { label: "Faible", color: "bg-red-400" },
+    { label: "Moyen", color: "bg-yellow-500" },
+    { label: "Bon", color: "bg-blue-500" },
+    { label: "Fort", color: "bg-green-500" },
+    { label: "Fort", color: "bg-green-500" },
+  ];
+  return { score, ...levels[score], checks };
+}
+
+function isPasswordValid(checks: PasswordStrength["checks"]): boolean {
+  return Object.values(checks).every(Boolean);
+}
+
 export default function LoginPage() {
   const { user, loading, login, loginWithCredentials, register, verifyEmail, resendCode } = useAuth();
   const router = useRouter();
@@ -91,6 +128,12 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
+        const strength = getPasswordStrength(password);
+        if (!isPasswordValid(strength.checks)) {
+          setError("Le mot de passe ne respecte pas tous les criteres de securite.");
+          setSubmitting(false);
+          return;
+        }
         const result = await register(email, password, name || undefined);
         if (result.success) {
           setVerificationEmail(email);
@@ -251,10 +294,41 @@ export default function LoginPage() {
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               placeholder="Min. 8 caractères"
             />
+            {isRegister && password.length > 0 && (() => {
+              const strength = getPasswordStrength(password);
+              return (
+                <div className="mt-2 space-y-2">
+                  {/* Strength bar */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
+                        style={{ width: `${(strength.score / 5) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 w-20 text-right">{strength.label}</span>
+                  </div>
+                  {/* Criteria checklist */}
+                  <ul className="text-xs space-y-0.5">
+                    {[
+                      { key: "minLength" as const, label: "8 caracteres minimum" },
+                      { key: "hasUpper" as const, label: "Une majuscule" },
+                      { key: "hasLower" as const, label: "Une minuscule" },
+                      { key: "hasDigit" as const, label: "Un chiffre" },
+                      { key: "hasSpecial" as const, label: "Un caractere special (!@#$...)" },
+                    ].map(({ key, label }) => (
+                      <li key={key} className={strength.checks[key] ? "text-green-400" : "text-gray-500"}>
+                        {strength.checks[key] ? "\u2713" : "\u2717"} {label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (isRegister && !isPasswordValid(getPasswordStrength(password).checks))}
             className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
           >
             {submitting

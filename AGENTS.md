@@ -10,8 +10,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **Framework**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Backend**: External ASP.NET Core 8 API (separate repo: `BookingApi/`)
-- **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + JWT stored in localStorage
-- **API Client**: `src/lib/api-client.ts` — centralized HTTP client with JWT auth
+- **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + JWT via httpOnly cookie (set by backend)
+- **API Client**: `src/lib/api-client.ts` — centralized HTTP client with cookie-based auth (`credentials: "include"`)
 - **Roles**: Artist / Booker (chosen at onboarding)
 
 ## How Auth Works
@@ -20,24 +20,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
 1. Login page uses Google Identity Services (GIS) button
 2. Google returns an `idToken` (credential)
 3. Frontend sends it to `POST /api/auth/google` on the backend
-4. Backend returns a JWT, stored in `localStorage` via `api.setToken()`
+4. Backend returns user info in body + sets JWT as httpOnly cookie
 5. `AuthProvider` (`src/lib/auth-context.tsx`) manages user state + provides `useAuth()` hook
-6. All API calls attach `Authorization: Bearer <jwt>` via `api-client.ts`
+6. All API calls include cookies via `credentials: "include"` in `api-client.ts`
 
 ### Email/Password
 1. User fills in email/password (+ optional name) on login page → `POST /api/auth/register`
 2. Backend creates user, sends 6-digit verification code via email
 3. Frontend shows verification code input screen (6-digit, monospace, auto-focus)
-4. User enters code → `POST /api/auth/verify-email` → backend returns JWT → redirect to `/onboarding`
+4. User enters code → `POST /api/auth/verify-email` → backend sets JWT cookie → redirect to `/onboarding`
 5. Subsequent logins via `POST /api/auth/login` → if email unverified, backend returns 403 + auto-resends code → frontend redirects to verification screen
 6. "Resend code" button with 120s cooldown timer
 7. Login page toggles between "Se connecter" and "S'inscrire" modes
+8. **Password strength validation**: real-time indicator with 5 criteria (8+ chars, uppercase, lowercase, digit, special char). Submit button disabled until all criteria are met.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, JWT management, file upload/download) |
+| `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, cookie-based auth with `credentials: "include"`, file upload/download) |
 | `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook (login, loginWithCredentials, register, verifyEmail, resendCode, logout, refreshUser) |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
@@ -224,8 +225,9 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **No backend code in this repo** — all API routes, database, auth validation are in the `booking-api` repo
 - **All pages are client components** — no server components with data fetching
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
-- **File uploads** use `api.upload()` (multipart/form-data with JWT auth)
-- **File downloads** use `api.downloadFile()` (fetch + blob URL to pass JWT auth, not plain `<a href>`)
+- **Cookie-based auth**: JWT is stored in an httpOnly cookie set by the backend. The frontend never reads/writes the JWT directly. All requests use `credentials: "include"`. Logout calls `POST /api/auth/logout` to clear the cookie.
+- **File uploads** use `api.upload()` (multipart/form-data with cookie auth)
+- **File downloads** use `api.downloadFile()` (fetch + blob URL with cookie auth, not plain `<a href>`)
 - **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role. Invitation page (`/invitations/[token]`) stores redirect URL in `localStorage` so the artist returns to the invitation after login.
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
 - **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
