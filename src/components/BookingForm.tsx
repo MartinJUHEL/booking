@@ -504,6 +504,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                 type="number"
                 value={form.fee}
                 onChange={(e) => set("fee", e.target.value)}
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="input"
                 placeholder="0"
               />
