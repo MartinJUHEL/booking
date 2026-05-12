@@ -62,6 +62,9 @@ function HomeContent() {
     if (!loading && user && !user.role) {
       router.replace("/onboarding");
     }
+    if (!loading && user && user.role === "booker" && !user.agencyId) {
+      router.replace("/onboarding");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user]);
 

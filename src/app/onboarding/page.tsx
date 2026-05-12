@@ -14,6 +14,8 @@ export default function OnboardingPage() {
       router.replace("/login");
     }
     if (!loading && user?.role) {
+      // Bookers without an agency stay on onboarding to complete setup
+      if (user.role === "booker" && !user.agencyId) return;
       router.replace("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

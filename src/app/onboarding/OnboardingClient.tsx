@@ -7,14 +7,17 @@ import { useAuth } from "@/lib/auth-context";
 
 export default function OnboardingClient({ userName }: { userName: string }) {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [role, setRole] = useState<"artist" | "booker" | null>(null);
   const [artistName, setArtistName] = useState("");
   const [saving, setSaving] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
   // Booker agency step
-  const [step, setStep] = useState<"role" | "agency">("role");
+  // If user already has role "booker" but no agency, skip to agency step
+  const [step, setStep] = useState<"role" | "agency">(
+    user?.role === "booker" && !user?.agencyId ? "agency" : "role"
+  );
   const [agencyMode, setAgencyMode] = useState<"create" | "join" | null>(null);
   const [agencyName, setAgencyName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
