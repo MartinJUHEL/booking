@@ -48,7 +48,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Artist dashboard (read-only): Table / Calendar / Promoters tabs, no create/edit/delete |
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields, transport legs, ticket upload |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet, Status, Hotel, Transport |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
@@ -85,7 +85,7 @@ interface BookingListItem {
 ```
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
-The full `Booking` interface extends the list fields with: `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`.
+The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`.
 
 ### DashboardBookingItem (booker dashboard, extends BookingListItem)
 Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
@@ -173,7 +173,7 @@ The frontend uses a list/detail split to minimize API payload:
 ## Booking Detail Panel
 
 Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) which fetches the full booking detail from `GET /api/bookings/{id}`. It shows:
-- Event info (date, venue, city, promoter, status, fee)
+- Event info (date, venue with address/website, city, country, promoter with inline details, status, fee)
 - **Hotel/lodging** (name, address with Google Maps link, booking number, check-in, breakfast/late checkout tags, additional notes)
 - **Transport** info with ticket download links
 - Checklist (contract, fees)
@@ -208,6 +208,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - **No global "Submit" button** — fields are sent individually
 - **Validated fields are locked**: inputs are `readOnly`, the "Send" button is hidden, backend also rejects save/send attempts (400)
 - Sections: Show, Promoter, Venue, Tickets, Contacts, Event Details, Hotel, Dinner, Arrival, Show Transfers, Departure
+- **Venue autocomplete**: the `venueName` field uses a `venue-search` type with autocomplete via `/api/venues/search`. Selecting a result auto-fills `venueAddress`, `venueCity`, `venueCountry` via an `onAutoFill` callback
 - Section headers show sent/total counter (e.g. "3/7 sent")
 - Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker), rejected (red with booker's comment)
 - Token expiry: re-entering email + new code restores access (data persisted server-side)
@@ -224,7 +225,7 @@ Clicking a promoter card in `PromoterList` opens a slide-in side panel (`Promote
 
 Each field has a **click-to-copy** feature for easy use in invoices/contracts. The panel has a "Modifier" button to open the edit form.
 
-All promoter fields (company, address, email, phone, siret, ape, vatNumber, companyWebsite) are synced bidirectionally with the advancing form `promoter` section. Hotel fields (name, address, bookingNumber, checkIn, lateCheckout, breakfast, notes) are synced with the advancing form `hotel` section; validating any hotel field via advancing auto-sets `hotel.booked = true`.
+All promoter fields (company, address, email, phone, siret, ape, vatNumber, companyWebsite) are synced bidirectionally with the advancing form `promoter` section. Hotel fields (name, address, bookingNumber, checkIn, lateCheckout, breakfast, notes) are synced with the advancing form `hotel` section; validating any hotel field via advancing auto-sets `hotel.booked = true`. Venue fields (venue name, address, city, country, website) are synced with the advancing form `venue` section; the `venueName` field uses venue autocomplete to auto-fill address/city/country.
 
 ## Environment Variables
 
