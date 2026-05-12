@@ -55,6 +55,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     city: booking?.city || "",
     country: booking?.country || "",
     fee: booking?.fee?.toString() || "",
+    allInclusive: booking?.allInclusive || false,
     contractSigned: booking?.contractSigned || false,
     agencyFeesPaid: booking?.agencyFeesPaid || false,
     artistFeesPaid: booking?.artistFeesPaid || false,
@@ -509,6 +510,15 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                 placeholder="0"
               />
             </Field>
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.allInclusive}
+                onChange={(e) => set("allInclusive", e.target.checked)}
+                className="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-indigo-500"
+              />
+              All inclusive
+            </label>
           </fieldset>
 
           {/* Status */}

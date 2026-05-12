@@ -64,6 +64,7 @@ export interface BookingListItem {
   city: string;
   country: string;
   fee: number;
+  allInclusive: boolean;
   contractSigned: boolean;
   agencyFeesPaid: boolean;
   artistFeesPaid: boolean;
@@ -104,6 +105,7 @@ export interface Booking {
   city: string;
   country: string;
   fee: number;
+  allInclusive: boolean;
   contractSigned: boolean;
   agencyFeesPaid: boolean;
   artistFeesPaid: boolean;

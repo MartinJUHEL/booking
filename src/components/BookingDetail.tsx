@@ -101,7 +101,10 @@ export default function BookingDetail({
             <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColors[booking.status] || ""}`}>
               {statusLabels[booking.status] || booking.status}
             </span>
-            <span className="text-lg font-semibold font-mono text-white">{booking.fee.toLocaleString("fr-FR")} €</span>
+            <span className="text-lg font-semibold font-mono text-white">
+              {booking.fee.toLocaleString("fr-FR")} €
+              {booking.allInclusive && <span className="ml-2 text-xs font-medium text-emerald-400">(All Inclusive)</span>}
+            </span>
           </div>
 
           {/* Event info */}

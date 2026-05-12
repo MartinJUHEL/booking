@@ -48,7 +48,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Artist dashboard (read-only): Table / Calendar / Promoters tabs, no create/edit/delete |
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet, Status, Hotel, Transport |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
@@ -75,6 +75,7 @@ interface BookingListItem {
   city: string;
   country: string;
   fee: number;
+  allInclusive: boolean;
   contractSigned: boolean;
   agencyFeesPaid: boolean;
   artistFeesPaid: boolean;
@@ -173,7 +174,7 @@ The frontend uses a list/detail split to minimize API payload:
 ## Booking Detail Panel
 
 Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) which fetches the full booking detail from `GET /api/bookings/{id}`. It shows:
-- Event info (date, venue with address/website, city, country, promoter with inline details, status, fee)
+- Event info (date, venue with address/website, city, country, promoter with inline details, status, fee with "All Inclusive" tag if applicable)
 - **Hotel/lodging** (name, address with Google Maps link, booking number, check-in, breakfast/late checkout tags, additional notes)
 - **Transport** info with ticket download links
 - Checklist (contract, fees)
