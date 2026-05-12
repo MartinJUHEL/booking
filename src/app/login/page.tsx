@@ -393,6 +393,16 @@ export default function LoginPage() {
         {error && (
           <p className="text-red-400 text-sm mt-4">{error}</p>
         )}
+
+        <div className="mt-8 pt-6 border-t border-gray-700 flex justify-center gap-4 text-xs text-gray-500">
+          <a href="/privacy-policy" className="hover:text-gray-300 transition-colors">
+            Politique de confidentialite
+          </a>
+          <span>·</span>
+          <a href="/terms" className="hover:text-gray-300 transition-colors">
+            Conditions d&apos;utilisation
+          </a>
+        </div>
       </div>
     </div>
   );
