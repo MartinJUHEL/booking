@@ -8,12 +8,13 @@ interface PromoterWithCount extends Promoter {
 
 interface Props {
   promoters: PromoterWithCount[];
-  onEdit: (promoter: Promoter) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (promoter: Promoter) => void;
+  onDelete?: (id: string) => void;
   onSelect: (promoter: PromoterWithCount) => void;
+  readOnly?: boolean;
 }
 
-export default function PromoterList({ promoters, onEdit, onDelete, onSelect }: Props) {
+export default function PromoterList({ promoters, onEdit, onDelete, onSelect, readOnly }: Props) {
   if (promoters.length === 0) {
     return (
       <div className="text-center py-16 text-gray-500">
@@ -66,20 +67,22 @@ export default function PromoterList({ promoters, onEdit, onDelete, onSelect }: 
             </div>
           )}
 
+          {!readOnly && (
           <div className="flex gap-2 mt-4">
             <button
-              onClick={(e) => { e.stopPropagation(); onEdit(p); }}
+              onClick={(e) => { e.stopPropagation(); onEdit?.(p); }}
               className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
             >
               Modifier
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
+              onClick={(e) => { e.stopPropagation(); onDelete?.(p.id); }}
               className="text-xs text-red-400 hover:text-red-300 transition-colors"
             >
               Supprimer
             </button>
           </div>
+          )}
         </div>
       ))}
     </div>

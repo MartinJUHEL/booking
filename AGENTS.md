@@ -44,7 +44,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency create/join step for bookers |
 | `src/app/settings/` | Google Calendar settings |
-| `src/components/Dashboard.tsx` | Artist dashboard: Table / Calendar / Promoters tabs + booking/promoter detail panels |
+| `src/components/Dashboard.tsx` | Artist dashboard (read-only): Table / Calendar / Promoters tabs, no create/edit/delete |
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete, hotel fields, transport legs, ticket upload |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
@@ -136,8 +136,9 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 ## Roles
 
 ### Artist
-- Sees only their own bookings and promoters
-- Standard dashboard with Table / Calendar / Promoters tabs
+- **Read-only access** to their own bookings and promoters — no create, edit, or delete
+- Standard dashboard with Table / Calendar / Promoters tabs (no action buttons, no edit/delete)
+- Booking and promoter detail panels are read-only (no "Modifier" button)
 - **Pending booker invitations** shown as a banner above the dashboard with Accept/Reject buttons
 - **My bookers** section: shows linked bookers as chips with a remove button (`DELETE /api/artists/bookers/{bookerId}`)
 

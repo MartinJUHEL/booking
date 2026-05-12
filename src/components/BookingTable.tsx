@@ -49,12 +49,14 @@ export default function BookingTable({
   onDelete,
   onSelect,
   onToggleField,
+  readOnly,
 }: {
   bookings: BookingListItem[];
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
   onSelect?: (b: BookingListItem) => void;
   onToggleField?: (id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) => void;
+  readOnly?: boolean;
 }) {
   if (bookings.length === 0) {
     return (
@@ -81,7 +83,7 @@ export default function BookingTable({
             <th className="px-4 py-3 font-medium text-center">Fees Art.</th>
             <th className="px-4 py-3 font-medium text-center">Transport</th>
             <th className="px-4 py-3 font-medium text-center">Hotel</th>
-            <th className="px-4 py-3 font-medium"></th>
+            {!readOnly && <th className="px-4 py-3 font-medium"></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800/50">
@@ -140,20 +142,22 @@ export default function BookingTable({
                 <td className="px-4 py-3 text-center">
                   <Check checked={b.hotelBooked} />
                 </td>
+                {!readOnly && (
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(b.id); }}
+                    onClick={(e) => { e.stopPropagation(); onEdit?.(b.id); }}
                     className="text-gray-500 hover:text-purple-400 transition-colors mr-2"
                   >
                     Modifier
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(b.id); }}
+                    onClick={(e) => { e.stopPropagation(); onDelete?.(b.id); }}
                     className="text-gray-500 hover:text-red-400 transition-colors"
                   >
                     Suppr.
                   </button>
                 </td>
+                )}
               </tr>
             );
           })}

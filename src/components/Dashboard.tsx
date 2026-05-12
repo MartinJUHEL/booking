@@ -2,11 +2,9 @@
 
 import { useState, useMemo } from "react";
 import BookingTable from "./BookingTable";
-import BookingForm from "./BookingForm";
 import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
 import PromoterList from "./PromoterList";
-import PromoterForm from "./PromoterForm";
 import PromoterDetail from "./PromoterDetail";
 import type { Booking, BookingListItem, Promoter } from "./types";
 import { api } from "@/lib/api-client";
@@ -20,21 +18,13 @@ interface PromoterWithCount extends Promoter {
 export default function Dashboard({
   initialBookings,
   initialPromoters,
-  role = "artist",
-  artistId,
 }: {
   initialBookings: BookingListItem[];
   initialPromoters: PromoterWithCount[];
-  role?: "artist" | "booker";
-  artistId?: string;
 }) {
-  const [bookings, setBookings] = useState<BookingListItem[]>(initialBookings);
-  const [promoters, setPromoters] = useState<PromoterWithCount[]>(initialPromoters);
+  const [bookings] = useState<BookingListItem[]>(initialBookings);
+  const [promoters] = useState<PromoterWithCount[]>(initialPromoters);
   const [view, setView] = useState<ViewMode>("table");
-  const [showForm, setShowForm] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-  const [showPromoterForm, setShowPromoterForm] = useState(false);
-  const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [selectedPromoter, setSelectedPromoter] = useState<PromoterWithCount | null>(null);
   const [filter, setFilter] = useState("");
@@ -63,84 +53,6 @@ export default function Dashboard({
     const unpaidArtist = upcoming.filter((b) => !b.artistFeesPaid).length;
     return { upcoming: upcoming.length, totalFees, unsigned, unpaidArtist };
   }, [bookings]);
-
-  async function handleSave(data: Partial<Booking>) {
-    if (editingBooking) {
-      const updated = await api.put<Booking>(`/api/bookings/${editingBooking.id}`, data);
-      setBookings((prev) =>
-        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
-      );
-      setSelectedBookingId(null);
-      setTimeout(() => setSelectedBookingId(updated.id), 0);
-    } else {
-      const payload = artistId ? { ...data, artistId } : data;
-      const created = await api.post<BookingListItem>("/api/bookings", payload);
-      setBookings((prev) => [...prev, created].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      ));
-      setSelectedBookingId(created.id);
-    }
-    setShowForm(false);
-    setEditingBooking(null);
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("Supprimer cette date ?")) return;
-    await api.delete(`/api/bookings/${id}`);
-    setBookings((prev) => prev.filter((b) => b.id !== id));
-  }
-
-  async function handleToggleField(id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) {
-    try {
-      await api.put(`/api/bookings/${id}`, { [field]: value });
-      setBookings((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
-      );
-    } catch (err) {
-      console.error("Failed to update booking:", err);
-    }
-  }
-
-  function handleEdit(booking: Booking) {
-    setEditingBooking(booking);
-    setShowForm(true);
-  }
-
-  async function handleEditById(id: string) {
-    try {
-      const booking = await api.get<Booking>(`/api/bookings/${id}`);
-      handleEdit(booking);
-    } catch (err) {
-      console.error("Failed to load booking for editing:", err);
-    }
-  }
-
-  // Promoter CRUD
-  async function handleSavePromoter(data: Partial<Promoter>) {
-    if (editingPromoter) {
-      const updated = await api.put<Promoter>(`/api/promoters/${editingPromoter.id}`, data);
-      setPromoters((prev) =>
-        prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
-      );
-    } else {
-      const payload = artistId ? { ...data, artistId } : data;
-      const created = await api.post<Promoter>("/api/promoters", payload);
-      setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-    }
-    setShowPromoterForm(false);
-    setEditingPromoter(null);
-  }
-
-  async function handleDeletePromoter(id: string) {
-    if (!confirm("Supprimer ce promoteur ? Les dates associées conserveront le nom du promoteur.")) return;
-    await api.delete(`/api/promoters/${id}`);
-    setPromoters((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  function handleEditPromoter(promoter: Promoter) {
-    setEditingPromoter(promoter);
-    setShowPromoterForm(true);
-  }
 
   return (
     <div>
@@ -218,100 +130,39 @@ export default function Dashboard({
             Promoteurs
           </button>
         </div>
-        {view === "promoters" ? (
-          <button
-            onClick={() => {
-              setEditingPromoter(null);
-              setShowPromoterForm(true);
-            }}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-          >
-            + Nouveau promoteur
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setEditingBooking(null);
-              setShowForm(true);
-            }}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-          >
-            + Nouvelle date
-          </button>
-        )}
       </div>
 
       {/* Content */}
       {view === "table" ? (
         <BookingTable
           bookings={filtered}
-          onEdit={handleEditById}
-          onDelete={handleDelete}
           onSelect={(b) => setSelectedBookingId(b.id)}
-          onToggleField={handleToggleField}
+          readOnly
         />
       ) : view === "calendar" ? (
         <CalendarView bookings={filtered} onSelect={(b) => setSelectedBookingId(b.id)} />
       ) : (
         <PromoterList
           promoters={promoters}
-          onEdit={handleEditPromoter}
-          onDelete={handleDeletePromoter}
           onSelect={(p) => setSelectedPromoter(p)}
+          readOnly
         />
       )}
 
-      {/* Booking Modal */}
-      {showForm && (
-        <BookingForm
-          booking={editingBooking}
-          promoters={promoters}
-          onSave={handleSave}
-          onClose={() => {
-            setShowForm(false);
-            setEditingBooking(null);
-          }}
-          onPromoterCreated={(p) => {
-            setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
-          }}
-          artistId={artistId}
-        />
-      )}
-
-      {/* Promoter Modal */}
-      {showPromoterForm && (
-        <PromoterForm
-          promoter={editingPromoter}
-          onSave={handleSavePromoter}
-          onClose={() => {
-            setShowPromoterForm(false);
-            setEditingPromoter(null);
-          }}
-        />
-      )}
-
-      {/* Booking Detail Panel */}
+      {/* Booking Detail Panel (read-only) */}
       {selectedBookingId && (
         <BookingDetail
           bookingId={selectedBookingId}
           onClose={() => setSelectedBookingId(null)}
-          onEdit={(b) => {
-            setSelectedBookingId(null);
-            handleEdit(b);
-          }}
-          role={role}
+          role="artist"
         />
       )}
 
-      {/* Promoter Detail Panel */}
+      {/* Promoter Detail Panel (read-only) */}
       {selectedPromoter && (
         <PromoterDetail
           promoter={selectedPromoter}
           onClose={() => setSelectedPromoter(null)}
-          onEdit={(p) => {
-            setSelectedPromoter(null);
-            handleEditPromoter(p);
-          }}
         />
       )}
     </div>

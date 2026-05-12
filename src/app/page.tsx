@@ -320,7 +320,6 @@ function HomeContent() {
             <Dashboard
               initialBookings={bookings}
               initialPromoters={promoters}
-              role="artist"
             />
           </>
         )}

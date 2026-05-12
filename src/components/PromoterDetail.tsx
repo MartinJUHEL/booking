@@ -14,7 +14,7 @@ export default function PromoterDetail({
 }: {
   promoter: PromoterWithCount;
   onClose: () => void;
-  onEdit: (p: Promoter) => void;
+  onEdit?: (p: Promoter) => void;
 }) {
   return (
     <div className="fixed inset-0 z-60 flex justify-end">
@@ -29,12 +29,14 @@ export default function PromoterDetail({
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {onEdit && (
             <button
               onClick={() => onEdit(promoter)}
               className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
             >
               Modifier
             </button>
+            )}
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-white transition-colors text-xl ml-2"
