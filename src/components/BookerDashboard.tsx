@@ -139,6 +139,17 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     }
   }
 
+  async function handleDeleteBooking(id: string) {
+    if (!confirm("Supprimer cette date ?")) return;
+    try {
+      await api.delete(`/api/bookings/${id}`);
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+      if (selectedBookingId === id) setSelectedBookingId(null);
+    } catch (err) {
+      console.error("Failed to delete booking:", err);
+    }
+  }
+
   async function handleEdit(booking: Booking) {
     // Load promoters for the booking form
     try {
@@ -381,6 +392,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                 <th className="px-4 py-3 font-medium text-center">Fees Art.</th>
                 <th className="px-4 py-3 font-medium text-center">Transport</th>
                 <th className="px-4 py-3 font-medium text-center">Hotel</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
@@ -443,6 +455,14 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Check checked={b.hotelBooked} />
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteBooking(b.id); }}
+                        className="text-gray-500 hover:text-red-400 transition-colors text-xs"
+                      >
+                        Suppr.
+                      </button>
                     </td>
                   </tr>
                 );
