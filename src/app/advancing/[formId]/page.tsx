@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, useRef, use } from "react";
 import { api } from "@/lib/api-client";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5062";
@@ -32,7 +32,7 @@ interface AdvancingForm {
 interface FieldDef {
   key: string;
   label: string;
-  type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean";
+  type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean" | "venue-search";
   readonly?: boolean;
   options?: string[];
 }
@@ -73,7 +73,7 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "venue", label: "Venue", fields: [
-      { key: "venueName", label: "Name", type: "text" },
+      { key: "venueName", label: "Name", type: "venue-search" },
       { key: "venueAddress", label: "Address", type: "text" },
       { key: "venueCity", label: "City", type: "text" },
       { key: "venueCountry", label: "Country - State", type: "text" },
@@ -446,6 +446,11 @@ export default function AdvancingPage({ params }: { params: Promise<{ formId: st
             onSend={sendField}
             artistName={form.artistName}
             fieldValues={form.fieldValues}
+            onAutoFill={(fields) => {
+              for (const { section: s, key, value } of fields) {
+                saveField(s, key, value);
+              }
+            }}
           />
         ))}
       </main>
@@ -462,6 +467,7 @@ function Section({
   onSend,
   artistName,
   fieldValues,
+  onAutoFill,
 }: {
   section: SectionDef;
   getFieldValue: (section: string, key: string) => string;
@@ -471,6 +477,7 @@ function Section({
   onSend: (section: string, key: string) => void;
   artistName: string | null;
   fieldValues: AdvancingFieldValue[];
+  onAutoFill: (fields: { section: string; key: string; value: string | null }[]) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -509,6 +516,7 @@ function Section({
               onSend={onSend}
               readOnly={field.readonly}
               fieldValue={fieldValues.find(fv => fv.section === section.key && fv.fieldKey === field.key)}
+              onAutoFill={onAutoFill}
             />
           ))}
         </div>
@@ -527,6 +535,7 @@ function Field({
   onSend,
   readOnly,
   fieldValue,
+  onAutoFill,
 }: {
   sectionKey: string;
   field: FieldDef;
@@ -537,9 +546,62 @@ function Field({
   onSend: (section: string, key: string) => void;
   readOnly?: boolean;
   fieldValue?: AdvancingFieldValue;
+  onAutoFill: (fields: { section: string; key: string; value: string | null }[]) => void;
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  // Venue search state
+  const [venueResults, setVenueResults] = useState<{ name: string; address: string; city: string; country: string }[]>([]);
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+  const [venueLoading, setVenueLoading] = useState(false);
+  const venueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const venueWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close venue dropdown on outside click
+  useEffect(() => {
+    if (field.type !== "venue-search") return;
+    function handleClick(e: MouseEvent) {
+      if (venueWrapperRef.current && !venueWrapperRef.current.contains(e.target as Node)) {
+        setShowVenueDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [field.type]);
+
+  const searchVenue = useCallback(async (query: string) => {
+    if (query.length < 2) { setVenueResults([]); setShowVenueDropdown(false); return; }
+    setVenueLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/venues/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVenueResults(data);
+        setShowVenueDropdown(data.length > 0);
+      }
+    } catch { setVenueResults([]); }
+    finally { setVenueLoading(false); }
+  }, []);
+
+  function handleVenueChange(newValue: string) {
+    handleChange(newValue);
+    if (venueTimerRef.current) clearTimeout(venueTimerRef.current);
+    venueTimerRef.current = setTimeout(() => searchVenue(newValue), 350);
+  }
+
+  function selectVenueResult(result: { name: string; address: string; city: string; country: string }) {
+    setLocalValue(result.name);
+    onSave(sectionKey, field.key, result.name);
+    setShowVenueDropdown(false);
+    setVenueResults([]);
+    // Auto-fill sibling venue fields
+    const fills: { section: string; key: string; value: string | null }[] = [];
+    if (result.address) fills.push({ section: sectionKey, key: "venueAddress", value: result.address });
+    if (result.city) fills.push({ section: sectionKey, key: "venueCity", value: result.city });
+    if (result.country) fills.push({ section: sectionKey, key: "venueCountry", value: result.country });
+    if (fills.length > 0) onAutoFill(fills);
+  }
 
   useEffect(() => {
     setLocalValue(value);
@@ -596,7 +658,41 @@ function Field({
       )}
       <div className="flex gap-2">
         <div className="flex-1">
-          {field.type === "textarea" ? (
+          {field.type === "venue-search" ? (
+            <div ref={venueWrapperRef} className="relative">
+              <input
+                value={localValue}
+                onChange={e => handleVenueChange(e.target.value)}
+                onFocus={() => venueResults.length > 0 && setShowVenueDropdown(true)}
+                readOnly={readOnly || isValidated}
+                className={inputClass}
+                autoComplete="off"
+              />
+              {venueLoading && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">...</span>
+              )}
+              {showVenueDropdown && (
+                <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+                  {venueResults.map((r, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        onClick={() => selectVenueResult(r)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors"
+                      >
+                        <span className="text-white">{r.name}</span>
+                        {(r.city || r.country) && (
+                          <span className="text-gray-400 ml-2 text-xs">
+                            {[r.city, r.country].filter(Boolean).join(", ")}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : field.type === "textarea" ? (
             <textarea
               value={localValue}
               onChange={e => handleChange(e.target.value)}

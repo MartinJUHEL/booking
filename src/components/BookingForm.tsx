@@ -464,7 +464,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                   required
                   value={form.city}
                   onChange={(e) => set("city", e.target.value)}
-                  className="input"
+                  className="input text-xs"
                   placeholder="Paris"
                 />
               </Field>
@@ -473,7 +473,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                   required
                   value={form.country}
                   onChange={(e) => set("country", e.target.value)}
-                  className="input"
+                  className="input text-xs"
                   placeholder="France"
                 />
               </Field>
