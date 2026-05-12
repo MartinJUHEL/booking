@@ -12,7 +12,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Backend**: External ASP.NET Core 8 API (separate repo: `BookingApi/`)
 - **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + JWT via httpOnly cookie (set by backend)
 - **API Client**: `src/lib/api-client.ts` — centralized HTTP client with cookie-based auth (`credentials: "include"`)
-- **Roles**: Artist / Booker (chosen at onboarding)
+- **Roles**: Artist / Booker (chosen at onboarding). Bookers belong to an Agency (created or joined via invite code during onboarding).
 
 ## How Auth Works
 
@@ -39,10 +39,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | File | Purpose |
 |------|---------|
 | `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, cookie-based auth with `credentials: "include"`, file upload/download) |
-| `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook (login, loginWithCredentials, register, verifyEmail, resendCode, logout, refreshUser) |
+| `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook — User includes `agencyId`, `agencyName` |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
-| `src/app/onboarding/` | Role selection (artist/booker) |
+| `src/app/onboarding/` | Role selection (artist/booker) + agency create/join step for bookers |
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Artist dashboard: Table / Calendar / Promoters tabs + booking/promoter detail panels |
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
@@ -57,7 +57,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
 | `src/app/invitations/[token]/page.tsx` | Booker invitation accept/reject page (artist clicks email link, authenticates, accepts or rejects) |
-| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter) |
+| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter). Promoter uses `agencyId` (not `userId`). |
 
 ## Data Model (TypeScript)
 
@@ -142,15 +142,17 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **My bookers** section: shows linked bookers as chips with a remove button (`DELETE /api/artists/bookers/{bookerId}`)
 
 ### Booker
+- **Belongs to an Agency** — created or joined via 8-char invite code during onboarding
+- **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering)
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)
 - **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
-- **Invites artists by email** (sends invitation, artist must accept) — no longer adds directly
+- **Invites artists by email** (sends invitation, artist must accept) — artists are linked to the agency (via `AgencyArtist`), visible to all bookers in the agency
 - **Artist chips** with remove button (`×`) to sever the link
 - Can send advancing form links to promoters and validate sent fields one by one
 - **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`
-- `/onboarding` page for first-time role selection
+- `/onboarding` page: step 1 = role selection, step 2 = agency create/join (bookers without an agency are redirected back here)
 
 ## Booking List/Detail Pattern
 
@@ -228,7 +230,7 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **Cookie-based auth**: JWT is stored in an httpOnly cookie set by the backend. The frontend never reads/writes the JWT directly. All requests use `credentials: "include"`. Logout calls `POST /api/auth/logout` to clear the cookie.
 - **File uploads** use `api.upload()` (multipart/form-data with cookie auth)
 - **File downloads** use `api.downloadFile()` (fetch + blob URL with cookie auth, not plain `<a href>`)
-- **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, or `/onboarding` if no role. Invitation page (`/invitations/[token]`) stores redirect URL in `localStorage` so the artist returns to the invitation after login.
+- **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, `/onboarding` if no role, or `/onboarding` if booker without agency. Invitation page (`/invitations/[token]`) stores redirect URL in `localStorage` so the artist returns to the invitation after login.
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
 - **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
 - **Advancing review** is only visible to bookers — the `BookingDetail` component receives a `role` prop and conditionally renders the `AdvancingReview` component
