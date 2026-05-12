@@ -53,6 +53,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   // Verification step
   const [step, setStep] = useState<Step>("form");
@@ -62,6 +63,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
+      setRedirecting(true);
       const redirect = typeof window !== "undefined" ? localStorage.getItem("redirectAfterLogin") : null;
       if (redirect) {
         localStorage.removeItem("redirectAfterLogin");
@@ -129,6 +131,7 @@ export default function LoginPage() {
     setError("");
     const success = await login(response.credential);
     if (success) {
+      setRedirecting(true);
       router.push("/");
     } else {
       setError("Echec de la connexion. Verifiez que le backend est accessible.");
@@ -159,6 +162,7 @@ export default function LoginPage() {
       } else {
         const result = await loginWithCredentials(email, password);
         if (result.success) {
+          setRedirecting(true);
           router.push("/");
         } else if (result.needsVerification) {
           setVerificationEmail(result.email || email);
@@ -181,6 +185,7 @@ export default function LoginPage() {
     try {
       const result = await verifyEmail(verificationEmail, code);
       if (result.success) {
+        setRedirecting(true);
         router.push("/onboarding");
       } else {
         setError(result.error || "Code invalide ou expiré");
@@ -200,6 +205,15 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <div className="h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        <div className="text-gray-400 text-sm">Connexion en cours...</div>
       </div>
     );
   }

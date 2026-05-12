@@ -11,6 +11,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
   const [role, setRole] = useState<"artist" | "booker" | null>(null);
   const [artistName, setArtistName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function handleSubmit() {
     if (!role) return;
@@ -22,11 +23,21 @@ export default function OnboardingClient({ userName }: { userName: string }) {
         api.setToken(result.token);
       }
       await refreshUser();
+      setRedirecting(true);
       router.push("/");
     } catch (err) {
       console.error(err);
     }
     setSaving(false);
+  }
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <div className="h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        <div className="text-gray-400 text-sm">Preparation de votre espace...</div>
+      </div>
+    );
   }
 
   return (
