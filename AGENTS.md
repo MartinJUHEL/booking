@@ -138,9 +138,9 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 ## Roles
 
 ### Artist
-- **Read-only access** to their own bookings and promoters — no create, edit, or delete
-- Standard dashboard with Table / Calendar / Promoters tabs (no action buttons, no edit/delete)
-- Booking and promoter detail panels are read-only (no "Modifier" button)
+- **Read-only access** to their own bookings — no create, edit, or delete, no promoters tab
+- Dashboard with Table / Calendar tabs only (no action buttons, no edit/delete)
+- Booking detail panel is read-only (no "Modifier" button)
 - **Pending booker invitations** shown as a banner above the dashboard with Accept/Reject buttons
 - **My bookers** section: shows linked bookers as chips with a remove button (`DELETE /api/artists/bookers/{bookerId}`)
 
@@ -150,6 +150,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **Join flow** (`/agency/join/[token]`): booker clicks invitation link from email, authenticates if needed (stores redirect in `localStorage`), sees agency info, clicks "Rejoindre". Email must match invitation. Link expires after 5 minutes (HTTP 410).
 - **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering)
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)
+- **"+ Nouvelle date" button**: creates a booking for a selected artist. If only one artist, opens the form directly; if multiple, shows an artist selector modal first.
 - **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
