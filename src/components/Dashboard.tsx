@@ -4,29 +4,18 @@ import { useState, useMemo } from "react";
 import BookingTable from "./BookingTable";
 import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
-import PromoterList from "./PromoterList";
-import PromoterDetail from "./PromoterDetail";
-import type { Booking, BookingListItem, Promoter } from "./types";
-import { api } from "@/lib/api-client";
+import type { BookingListItem } from "./types";
 
-type ViewMode = "table" | "calendar" | "promoters";
-
-interface PromoterWithCount extends Promoter {
-  _count?: { bookings: number };
-}
+type ViewMode = "table" | "calendar";
 
 export default function Dashboard({
   initialBookings,
-  initialPromoters,
 }: {
   initialBookings: BookingListItem[];
-  initialPromoters: PromoterWithCount[];
 }) {
   const [bookings] = useState<BookingListItem[]>(initialBookings);
-  const [promoters] = useState<PromoterWithCount[]>(initialPromoters);
   const [view, setView] = useState<ViewMode>("table");
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [selectedPromoter, setSelectedPromoter] = useState<PromoterWithCount | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -77,27 +66,23 @@ export default function Dashboard({
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        {view !== "promoters" && (
-          <>
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm flex-1 focus:outline-none focus:border-purple-500"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="pending">En attente</option>
-              <option value="confirmed">Confirmé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
-          </>
-        )}
+        <input
+          type="text"
+          placeholder="Rechercher..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm flex-1 focus:outline-none focus:border-purple-500"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+        >
+          <option value="all">Tous les statuts</option>
+          <option value="pending">En attente</option>
+          <option value="confirmed">Confirmé</option>
+          <option value="cancelled">Annulé</option>
+        </select>
         <div className="flex gap-2">
           <button
             onClick={() => setView("table")}
@@ -119,16 +104,6 @@ export default function Dashboard({
           >
             Calendrier
           </button>
-          <button
-            onClick={() => setView("promoters")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "promoters"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            Promoteurs
-          </button>
         </div>
       </div>
 
@@ -139,14 +114,8 @@ export default function Dashboard({
           onSelect={(b) => setSelectedBookingId(b.id)}
           readOnly
         />
-      ) : view === "calendar" ? (
-        <CalendarView bookings={filtered} onSelect={(b) => setSelectedBookingId(b.id)} />
       ) : (
-        <PromoterList
-          promoters={promoters}
-          onSelect={(p) => setSelectedPromoter(p)}
-          readOnly
-        />
+        <CalendarView bookings={filtered} onSelect={(b) => setSelectedBookingId(b.id)} />
       )}
 
       {/* Booking Detail Panel (read-only) */}
@@ -155,14 +124,6 @@ export default function Dashboard({
           bookingId={selectedBookingId}
           onClose={() => setSelectedBookingId(null)}
           role="artist"
-        />
-      )}
-
-      {/* Promoter Detail Panel (read-only) */}
-      {selectedPromoter && (
-        <PromoterDetail
-          promoter={selectedPromoter}
-          onClose={() => setSelectedPromoter(null)}
         />
       )}
     </div>

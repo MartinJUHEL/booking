@@ -7,18 +7,13 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
 import BookerDashboard from "@/components/BookerDashboard";
-import type { BookingListItem, Promoter } from "@/components/types";
+import type { BookingListItem } from "@/components/types";
 
 interface Artist {
   id: string;
   name: string | null;
   email: string;
   artistName: string | null;
-}
-
-interface PromoterWithCount extends Promoter {
-  bookingsCount?: number;
-  _count?: { bookings: number };
 }
 
 export default function Home() {
@@ -35,7 +30,6 @@ function HomeContent() {
 
   const [artists, setArtists] = useState<Artist[]>([]);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
-  const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
   const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -82,14 +76,12 @@ function HomeContent() {
           const artistsData = await api.get<Artist[]>("/api/artists");
           setArtists(artistsData);
         } else {
-          const [b, p, inv, bookers] = await Promise.all([
+          const [b, inv, bookers] = await Promise.all([
             api.get<BookingListItem[]>("/api/bookings"),
-            api.get<PromoterWithCount[]>("/api/promoters"),
             api.get<Array<{ id: string; token: string; bookerName: string; bookerEmail: string; createdAt: string }>>("/api/artists/invitations"),
             api.get<Array<{ id: string; name: string | null; email: string; image: string | null; linkedAt: string }>>("/api/artists/bookers"),
           ]);
           setBookings(b);
-          setPromoters(p.map(pr => ({ ...pr, _count: { bookings: pr.bookingsCount || 0 } })));
           setPendingInvitations(inv);
           setMyBookers(bookers);
         }
@@ -319,7 +311,6 @@ function HomeContent() {
 
             <Dashboard
               initialBookings={bookings}
-              initialPromoters={promoters}
             />
           </>
         )}
