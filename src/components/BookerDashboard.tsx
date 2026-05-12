@@ -76,6 +76,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   // Booking form state
   const [showForm, setShowForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [createForArtistId, setCreateForArtistId] = useState<string>("");
 
   // Promoter state
   const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
@@ -158,9 +159,19 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       );
       setSelectedBookingId(null);
       setTimeout(() => setSelectedBookingId(updated.id), 0);
+    } else {
+      // Create new booking for the selected artist
+      const artistId = createForArtistId;
+      if (!artistId) return;
+      const payload = { ...data, artistId };
+      const created = await api.post<Booking>("/api/bookings", payload);
+      // Refresh bookings list
+      fetchBookings();
+      setSelectedBookingId(created.id);
     }
     setShowForm(false);
     setEditingBooking(null);
+    setCreateForArtistId("");
   }
 
   // Promoter CRUD
@@ -308,6 +319,23 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             <div className="text-sm text-gray-400 self-center">
               {bookings.length} date{bookings.length !== 1 ? "s" : ""}
             </div>
+
+            <button
+              onClick={async () => {
+                setEditingBooking(null);
+                setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
+                setShowForm(true);
+                try {
+                  const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
+                  setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+                } catch (err) {
+                  console.error("Failed to load promoters:", err);
+                }
+              }}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+            >
+              + Nouvelle date
+            </button>
           </>
         )}
       </div>
@@ -438,20 +466,53 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       )}
 
       {/* Booking Form Modal */}
-      {showForm && editingBooking && (
-        <BookingForm
-          booking={editingBooking}
-          promoters={promoters}
-          onSave={handleSave}
-          onClose={() => {
-            setShowForm(false);
-            setEditingBooking(null);
-          }}
-          onPromoterCreated={(p) => {
-            setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
-          }}
-          artistId={getArtistIdForBooking(editingBooking.id)}
-        />
+      {showForm && (
+        <>
+          {/* Artist selector for new bookings */}
+          {!editingBooking && !createForArtistId && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={() => { setShowForm(false); setCreateForArtistId(""); }} />
+              <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
+                <h2 className="text-lg font-bold mb-4">Nouvelle date</h2>
+                <p className="text-gray-400 text-sm mb-4">Pour quel artiste ?</p>
+                <div className="space-y-2">
+                  {artists.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => setCreateForArtistId(a.id)}
+                      className="w-full text-left px-4 py-3 rounded-lg border border-gray-700 bg-gray-800/50 hover:border-purple-500 transition-colors"
+                    >
+                      <span className="font-medium">{a.artistName || a.name || a.email}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setShowForm(false); setCreateForArtistId(""); }}
+                  className="mt-4 w-full text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Actual booking form (edit or create with artist selected) */}
+          {(editingBooking || createForArtistId) && (
+            <BookingForm
+              booking={editingBooking}
+              promoters={promoters}
+              onSave={handleSave}
+              onClose={() => {
+                setShowForm(false);
+                setEditingBooking(null);
+                setCreateForArtistId("");
+              }}
+              onPromoterCreated={(p) => {
+                setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
+              }}
+              artistId={editingBooking ? getArtistIdForBooking(editingBooking.id) : createForArtistId}
+            />
+          )}
+        </>
       )}
 
       {/* Promoter Form Modal */}
