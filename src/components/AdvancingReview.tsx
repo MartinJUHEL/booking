@@ -39,7 +39,8 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
     setLoading(true);
     try {
       const data = await api.get<AdvancingFormData | null>(`/api/bookings/${bookingId}/advancing`);
-      setFormData(data);
+      // A 204 No Content returns {} — treat it as null (no form exists)
+      setFormData(data && data.id ? data : null);
     } catch {
       // ignore
     } finally {
