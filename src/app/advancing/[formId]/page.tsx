@@ -34,6 +34,7 @@ interface FieldDef {
   label: string;
   type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean" | "venue-search" | "hotel-search";
   readonly?: boolean;
+  placeholder?: string;
   options?: string[];
 }
 
@@ -92,10 +93,10 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "contacts", label: "Contacts", fields: [
-      { key: "tourManager", label: "Tour manager", type: "text" },
-      { key: "technician", label: "Technician", type: "text" },
-      { key: "artistHandler", label: "Artist handler", type: "text" },
-      { key: "stageManager", label: "Stage manager", type: "text" },
+      { key: "tourManager", label: "Tour manager", type: "text", placeholder: "Name + phone number" },
+      { key: "technician", label: "Technician", type: "text", placeholder: "Name + phone number" },
+      { key: "artistHandler", label: "Artist handler", type: "text", placeholder: "Name + phone number" },
+      { key: "stageManager", label: "Stage manager", type: "text", placeholder: "Name + phone number" },
     ],
   },
   {
@@ -836,6 +837,7 @@ function Field({
               onFocus={handleFocus}
               onBlur={handleBlur}
               readOnly={readOnly || isValidated}
+              placeholder={field.placeholder}
               className={inputClass}
             />
           )}
