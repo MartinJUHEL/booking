@@ -102,7 +102,14 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const data = { ...form, fee: parseFloat(form.fee) || 0 };
+    const data = {
+      ...form,
+      fee: parseFloat(form.fee) || 0,
+      hotel: {
+        ...form.hotel,
+        checkIn: form.hotel.checkIn || null,
+      },
+    };
     if (promoterMode === "new") {
       data.promoterId = "";
     }
