@@ -70,17 +70,15 @@ export default function Dashboard({
       setBookings((prev) =>
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
-      // Refresh detail panel if open
-      if (selectedBookingId === updated.id) {
-        setSelectedBookingId(null);
-        setTimeout(() => setSelectedBookingId(updated.id), 0);
-      }
+      setSelectedBookingId(null);
+      setTimeout(() => setSelectedBookingId(updated.id), 0);
     } else {
       const payload = artistId ? { ...data, artistId } : data;
       const created = await api.post<BookingListItem>("/api/bookings", payload);
       setBookings((prev) => [...prev, created].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       ));
+      setSelectedBookingId(created.id);
     }
     setShowForm(false);
     setEditingBooking(null);

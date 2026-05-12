@@ -94,31 +94,69 @@ export default function BookingDetail({
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Status + Fee highlight */}
+          <div className="flex items-center justify-between">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColors[booking.status] || ""}`}>
+              {statusLabels[booking.status] || booking.status}
+            </span>
+            <span className="text-lg font-semibold font-mono text-white">{booking.fee.toLocaleString("fr-FR")} €</span>
+          </div>
+
           {/* Event info */}
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Evenement</h3>
-            <div className="space-y-1">
-              <p className="text-sm capitalize">{dateStr}</p>
-              {booking.time && <p className="text-sm text-gray-400">{booking.time}</p>}
-              <p className="text-sm text-gray-300">{booking.city}, {booking.country}</p>
-              <p className="text-sm text-gray-400">{booking.promoter}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status] || ""}`}>
-                  {statusLabels[booking.status] || booking.status}
-                </span>
-                <span className="text-sm font-mono text-gray-300">{booking.fee.toLocaleString("fr-FR")} €</span>
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Événement</h3>
+            <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Date</p>
+                  <p className="text-sm font-medium capitalize">{dateStr}</p>
+                </div>
+                {booking.time && (
+                  <div>
+                    <p className="text-xs text-gray-500">Heure</p>
+                    <p className="text-sm font-medium">{booking.time}</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Salle</p>
+                <p className="text-sm font-medium">{booking.venue}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Ville</p>
+                  <p className="text-sm text-gray-300">{booking.city}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Pays</p>
+                  <p className="text-sm text-gray-300">{booking.country}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Promoteur</p>
+                <p className="text-sm text-gray-300">{booking.promoter}</p>
               </div>
             </div>
           </section>
 
+          {/* Checklist */}
+          <section className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Checklist</h3>
+            <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-2">
+              <CheckItem label="Contrat signé" checked={booking.contractSigned} />
+              <CheckItem label="Fees agence payés" checked={booking.agencyFeesPaid} />
+              <CheckItem label="Fees artiste payés" checked={booking.artistFeesPaid} />
+            </div>
+          </section>
+
           {/* Logement */}
-          <section className="space-y-3">
+          <section className="space-y-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Logement</h3>
             {booking.hotel?.booked ? (
               <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
                 {booking.hotel.name && (
                   <div>
-                    <p className="text-xs text-gray-500">Hotel</p>
+                    <p className="text-xs text-gray-500">Hôtel</p>
                     <p className="text-sm font-medium">{booking.hotel.name}</p>
                   </div>
                 )}
@@ -210,21 +248,13 @@ export default function BookingDetail({
             );
           })}
 
-          {/* Checklist */}
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Checklist</h3>
-            <div className="space-y-1">
-              <CheckItem label="Contrat signé" checked={booking.contractSigned} />
-              <CheckItem label="Fees agence payés" checked={booking.agencyFeesPaid} />
-              <CheckItem label="Fees artiste payés" checked={booking.artistFeesPaid} />
-            </div>
-          </section>
-
           {/* Notes */}
           {booking.notes && (
             <section className="space-y-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</h3>
-              <p className="text-sm text-gray-400 whitespace-pre-wrap">{booking.notes}</p>
+              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4">
+                <p className="text-sm text-gray-400 whitespace-pre-wrap">{booking.notes}</p>
+              </div>
             </section>
           )}
 
