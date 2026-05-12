@@ -49,6 +49,9 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     promoter: booking?.promoter || "",
     promoterId: booking?.promoterId || "",
     venue: booking?.venue || "",
+    venueAddress1: booking?.venueAddress1 || "",
+    venuePostalCode: booking?.venuePostalCode || "",
+    venueWebsite: booking?.venueWebsite || "",
     city: booking?.city || "",
     country: booking?.country || "",
     fee: booking?.fee?.toString() || "",
@@ -476,6 +479,37 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                 placeholder="France"
               />
             </Field>
+          </div>
+
+          <Field label="Adresse">
+            <input
+              value={form.venueAddress1}
+              onChange={(e) => set("venueAddress1", e.target.value)}
+              className="input"
+              placeholder="123 rue de la Musique"
+            />
+          </Field>
+
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Code postal">
+              <input
+                value={form.venuePostalCode}
+                onChange={(e) => set("venuePostalCode", e.target.value)}
+                className="input"
+                placeholder="75001"
+              />
+            </Field>
+            <div className="col-span-2">
+              <Field label="Site web">
+                <input
+                  type="url"
+                  value={form.venueWebsite}
+                  onChange={(e) => set("venueWebsite", e.target.value)}
+                  className="input"
+                  placeholder="https://www.venue.com"
+                />
+              </Field>
+            </div>
           </div>
 
           {/* Status */}

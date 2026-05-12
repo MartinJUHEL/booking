@@ -134,6 +134,26 @@ export default function BookingDetail({
                   <p className="text-sm text-gray-300">{booking.country}</p>
                 </div>
               </div>
+              {booking.venueAddress1 && (
+                <div>
+                  <p className="text-xs text-gray-500">Adresse</p>
+                  <p className="text-sm text-gray-300">{booking.venueAddress1}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                {booking.venuePostalCode && (
+                  <div>
+                    <p className="text-xs text-gray-500">Code postal</p>
+                    <p className="text-sm text-gray-300">{booking.venuePostalCode}</p>
+                  </div>
+                )}
+                {booking.venueWebsite && (
+                  <div>
+                    <p className="text-xs text-gray-500">Site web</p>
+                    <a href={booking.venueWebsite} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline truncate block">{booking.venueWebsite}</a>
+                  </div>
+                )}
+              </div>
               <div>
                 <p className="text-xs text-gray-500">Promoteur</p>
                 <p className="text-sm text-gray-300">{booking.promoter}</p>
