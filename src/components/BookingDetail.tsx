@@ -210,10 +210,26 @@ export default function BookingDetail({
                     <p className="text-sm font-mono text-gray-300">{booking.hotel.bookingNumber}</p>
                   </div>
                 )}
+                {booking.hotel.checkIn && (
+                  <div>
+                    <p className="text-xs text-gray-500">Check-in</p>
+                    <p className="text-sm text-gray-300">
+                      {new Date(booking.hotel.checkIn).toLocaleString("fr-FR", {
+                        day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+                      })}
+                    </p>
+                  </div>
+                )}
                 <div className="flex gap-4 pt-1">
                   <Tag active={booking.hotel.breakfast} label="Petit-déjeuner" />
                   <Tag active={booking.hotel.lateCheckout} label="Late checkout" />
                 </div>
+                {booking.hotel.notes && (
+                  <div>
+                    <p className="text-xs text-gray-500">Informations supplémentaires</p>
+                    <p className="text-sm text-gray-400 whitespace-pre-wrap">{booking.hotel.notes}</p>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-gray-600 italic">Aucun logement réservé</p>

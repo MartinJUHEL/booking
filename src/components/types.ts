@@ -28,6 +28,8 @@ export interface Hotel {
   bookingNumber: string | null;
   breakfast: boolean;
   lateCheckout: boolean;
+  checkIn: string | null;
+  notes: string | null;
 }
 
 export interface TransportLeg {

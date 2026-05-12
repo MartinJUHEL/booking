@@ -111,12 +111,13 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "hotel", label: "Hotel", fields: [
-      { key: "hotelInfo", label: "Hotel information", type: "textarea" },
-      { key: "hotelBookingRef", label: "Booking reference", type: "text" },
-      { key: "hotelGuest", label: "Reservation for", type: "text" },
-      { key: "checkIn", label: "Check in", type: "datetime" },
-      { key: "checkOut", label: "Check out", type: "datetime" },
-      { key: "lateCheckOut", label: "Late Check Out", type: "boolean" },
+      { key: "hotelName", label: "Hotel name", type: "text" },
+      { key: "hotelBookingNumber", label: "Booking reference", type: "text" },
+      { key: "hotelAddress", label: "Address", type: "text" },
+      { key: "hotelCheckIn", label: "Check in", type: "datetime" },
+      { key: "hotelLateCheckout", label: "Late Check Out", type: "boolean" },
+      { key: "hotelBreakfast", label: "Breakfast included", type: "boolean" },
+      { key: "hotelNotes", label: "Additional information", type: "textarea" },
     ],
   },
   {

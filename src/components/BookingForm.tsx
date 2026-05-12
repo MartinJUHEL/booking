@@ -63,6 +63,8 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
       bookingNumber: booking?.hotel?.bookingNumber || "",
       breakfast: booking?.hotel?.breakfast || false,
       lateCheckout: booking?.hotel?.lateCheckout || false,
+      checkIn: booking?.hotel?.checkIn || "",
+      notes: booking?.hotel?.notes || "",
     },
     notes: booking?.notes || "",
     status: booking?.status || "pending",
@@ -694,6 +696,14 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                     )}
                   </div>
                 </Field>
+                <Field label="Check-in">
+                  <input
+                    type="datetime-local"
+                    value={form.hotel.checkIn}
+                    onChange={(e) => setHotel("checkIn", e.target.value)}
+                    className="input"
+                  />
+                </Field>
                 <div className="flex gap-6">
                   <Checkbox
                     label="Petit-déjeuner inclus"
@@ -706,6 +716,14 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                     onChange={(v) => setHotel("lateCheckout", v)}
                   />
                 </div>
+                <Field label="Informations supplémentaires">
+                  <textarea
+                    value={form.hotel.notes}
+                    onChange={(e) => setHotel("notes", e.target.value)}
+                    className="input min-h-[60px] resize-y"
+                    placeholder="Infos complémentaires (accès, parking, contact...)"
+                  />
+                </Field>
               </div>
             )}
           </div>
