@@ -3,10 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api-client";
 import BookingDetail from "./BookingDetail";
+import BookingForm from "./BookingForm";
 import CalendarView from "./CalendarView";
-import type { DashboardBookingItem, DashboardResponse } from "./types";
+import PromoterList from "./PromoterList";
+import PromoterForm from "./PromoterForm";
+import PromoterDetail from "./PromoterDetail";
+import type { Booking, DashboardBookingItem, DashboardResponse, Promoter } from "./types";
 
-type ViewMode = "table" | "calendar";
+type ViewMode = "table" | "calendar" | "promoters";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -25,6 +29,11 @@ interface Artist {
   name: string | null;
   email: string;
   artistName: string | null;
+}
+
+interface PromoterWithCount extends Promoter {
+  _count?: { bookings: number };
+  bookingsCount?: number;
 }
 
 function Check({ checked, onClick }: { checked: boolean; onClick?: () => void }) {
@@ -64,6 +73,17 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("table");
 
+  // Booking form state
+  const [showForm, setShowForm] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+
+  // Promoter state
+  const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
+  const [promotersLoading, setPromotersLoading] = useState(false);
+  const [showPromoterForm, setShowPromoterForm] = useState(false);
+  const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
+  const [selectedPromoter, setSelectedPromoter] = useState<PromoterWithCount | null>(null);
+
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
@@ -88,13 +108,24 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     fetchBookings();
   }, [fetchBookings]);
 
-  function handleArtistChange(value: string) {
-    setArtistFilter(value);
-  }
+  // Load promoters when switching to promoters view
+  const fetchPromoters = useCallback(async () => {
+    setPromotersLoading(true);
+    try {
+      const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
+      setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+    } catch (err) {
+      console.error("Failed to load promoters:", err);
+    } finally {
+      setPromotersLoading(false);
+    }
+  }, []);
 
-  function handleStatusChange(value: string) {
-    setStatusFilter(value);
-  }
+  useEffect(() => {
+    if (view === "promoters") {
+      fetchPromoters();
+    }
+  }, [view, fetchPromoters]);
 
   async function handleToggleField(id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) {
     try {
@@ -107,33 +138,97 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     }
   }
 
+  async function handleEdit(booking: Booking) {
+    // Load promoters for the booking form
+    try {
+      const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
+      setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+    } catch (err) {
+      console.error("Failed to load promoters:", err);
+    }
+    setEditingBooking(booking);
+    setShowForm(true);
+  }
+
+  async function handleSave(data: Partial<Booking>) {
+    if (editingBooking) {
+      const updated = await api.put<Booking>(`/api/bookings/${editingBooking.id}`, data);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
+      );
+      setSelectedBookingId(null);
+      setTimeout(() => setSelectedBookingId(updated.id), 0);
+    }
+    setShowForm(false);
+    setEditingBooking(null);
+  }
+
+  // Promoter CRUD
+  async function handleSavePromoter(data: Partial<Promoter>) {
+    if (editingPromoter) {
+      const updated = await api.put<Promoter>(`/api/promoters/${editingPromoter.id}`, data);
+      setPromoters((prev) =>
+        prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+      );
+    } else {
+      const payload = { ...data };
+      const created = await api.post<Promoter>("/api/promoters", payload);
+      setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+    setShowPromoterForm(false);
+    setEditingPromoter(null);
+  }
+
+  async function handleDeletePromoter(id: string) {
+    if (!confirm("Supprimer ce promoteur ? Les dates associées conserveront le nom du promoteur.")) return;
+    await api.delete(`/api/promoters/${id}`);
+    setPromoters((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function handleEditPromoter(promoter: Promoter) {
+    setEditingPromoter(promoter);
+    setShowPromoterForm(true);
+  }
+
+  // Resolve artistId for the booking being edited (from the dashboard item)
+  function getArtistIdForBooking(bookingId: string): string | undefined {
+    const item = bookings.find(b => b.id === bookingId);
+    return item?.artistId;
+  }
+
   return (
     <div>
       {/* Filters + View Toggle */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <select
-          value={artistFilter}
-          onChange={(e) => handleArtistChange(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-        >
-          <option value="">Tous les artistes</option>
-          {artists.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.artistName || a.name || a.email}
-            </option>
-          ))}
-        </select>
+        {view === "promoters" ? (
+          <div />
+        ) : (
+          <>
+            <select
+              value={artistFilter}
+              onChange={(e) => setArtistFilter(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+            >
+              <option value="">Tous les artistes</option>
+              {artists.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.artistName || a.name || a.email}
+                </option>
+              ))}
+            </select>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => handleStatusChange(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="pending">En attente</option>
-          <option value="confirmed">Confirmé</option>
-          <option value="cancelled">Annulé</option>
-        </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="pending">En attente</option>
+              <option value="confirmed">Confirmé</option>
+              <option value="cancelled">Annulé</option>
+            </select>
+          </>
+        )}
 
         <div className="flex gap-2">
           <button
@@ -156,44 +251,80 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
           >
             Calendrier
           </button>
+          <button
+            onClick={() => setView("promoters")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              view === "promoters"
+                ? "bg-purple-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}
+          >
+            Promoteurs
+          </button>
         </div>
 
         <div className="flex-1" />
 
-        {/* Year navigation */}
-        <div className="flex items-center gap-2">
+        {view === "promoters" ? (
           <button
-            onClick={() => setYear((y) => y - 1)}
-            disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
-            className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            onClick={() => {
+              setEditingPromoter(null);
+              setShowPromoterForm(true);
+            }}
+            disabled={false}
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
           >
-            &larr;
+            + Nouveau promoteur
           </button>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-purple-500"
-          >
-            {availableYears.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setYear((y) => y + 1)}
-            disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
-            className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            &rarr;
-          </button>
-        </div>
+        ) : (
+          <>
+            {/* Year navigation */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setYear((y) => y - 1)}
+                disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
+                className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                &larr;
+              </button>
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-purple-500"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setYear((y) => y + 1)}
+                disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
+                className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                &rarr;
+              </button>
+            </div>
 
-        <div className="text-sm text-gray-400 self-center">
-          {bookings.length} date{bookings.length !== 1 ? "s" : ""}
-        </div>
+            <div className="text-sm text-gray-400 self-center">
+              {bookings.length} date{bookings.length !== 1 ? "s" : ""}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Content */}
-      {loading ? (
+      {view === "promoters" ? (
+        promotersLoading ? (
+          <div className="text-center py-16 text-gray-500">Chargement...</div>
+        ) : (
+          <PromoterList
+            promoters={promoters}
+            onEdit={handleEditPromoter}
+            onDelete={handleDeletePromoter}
+            onSelect={(p) => setSelectedPromoter(p)}
+          />
+        )
+      ) : loading ? (
         <div className="text-center py-16 text-gray-500">Chargement...</div>
       ) : view === "calendar" ? (
         <CalendarView
@@ -298,10 +429,52 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
         <BookingDetail
           bookingId={selectedBookingId}
           onClose={() => setSelectedBookingId(null)}
-          onEdit={() => {
+          onEdit={(b) => {
             setSelectedBookingId(null);
+            handleEdit(b);
           }}
           role="booker"
+        />
+      )}
+
+      {/* Booking Form Modal */}
+      {showForm && editingBooking && (
+        <BookingForm
+          booking={editingBooking}
+          promoters={promoters}
+          onSave={handleSave}
+          onClose={() => {
+            setShowForm(false);
+            setEditingBooking(null);
+          }}
+          onPromoterCreated={(p) => {
+            setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
+          }}
+          artistId={getArtistIdForBooking(editingBooking.id)}
+        />
+      )}
+
+      {/* Promoter Form Modal */}
+      {showPromoterForm && (
+        <PromoterForm
+          promoter={editingPromoter}
+          onSave={handleSavePromoter}
+          onClose={() => {
+            setShowPromoterForm(false);
+            setEditingPromoter(null);
+          }}
+        />
+      )}
+
+      {/* Promoter Detail Panel */}
+      {selectedPromoter && (
+        <PromoterDetail
+          promoter={selectedPromoter}
+          onClose={() => setSelectedPromoter(null)}
+          onEdit={(p) => {
+            setSelectedPromoter(null);
+            handleEditPromoter(p);
+          }}
         />
       )}
     </div>

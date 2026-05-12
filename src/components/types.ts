@@ -11,7 +11,7 @@ export interface Promoter {
   signatory: string | null;
   signatoryRole: string | null;
   notes: string | null;
-  userId: string;
+  agencyId: string;
   createdAt: string;
   updatedAt: string;
 }

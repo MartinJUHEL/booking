@@ -10,6 +10,8 @@ interface User {
   image: string | null;
   role: string | null;
   artistName: string | null;
+  agencyId: string | null;
+  agencyName: string | null;
 }
 
 interface AuthContextType {
