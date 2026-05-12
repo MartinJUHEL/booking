@@ -7,6 +7,7 @@ import { api } from "@/lib/api-client";
 interface VenueResult {
   label: string;
   name: string;
+  address: string;
   city: string;
   country: string;
 }
@@ -49,8 +50,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     promoter: booking?.promoter || "",
     promoterId: booking?.promoterId || "",
     venue: booking?.venue || "",
-    venueAddress1: booking?.venueAddress1 || "",
-    venuePostalCode: booking?.venuePostalCode || "",
+    venueAddress: booking?.venueAddress || "",
     venueWebsite: booking?.venueWebsite || "",
     city: booking?.city || "",
     country: booking?.country || "",
@@ -158,11 +158,11 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     setForm((prev) => ({
       ...prev,
       venue: result.name,
+      venueAddress: result.address || prev.venueAddress,
       city: result.city || prev.city,
       country: result.country || prev.country,
     }));
-    setShowVenueDropdown(false);
-    setVenueResults([]);
+    setShowVenueDropdown(false); setVenueResults([]);
   }
 
   // Close dropdown on outside click
@@ -412,8 +412,9 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
           </div>
 
           {/* Venue */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Venue *">
+          <fieldset className="space-y-3 rounded-xl border border-gray-800 p-4">
+            <legend className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Venue</legend>
+            <Field label="Nom *">
               <div ref={venueWrapperRef} className="relative">
                 <input
                   required
@@ -449,7 +450,49 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                 )}
               </div>
             </Field>
-            <Field label="Cachet (€)">
+            <Field label="Adresse">
+              <input
+                value={form.venueAddress}
+                onChange={(e) => set("venueAddress", e.target.value)}
+                className="input"
+                placeholder="123 rue de la Musique, 75001 Paris"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Ville *">
+                <input
+                  required
+                  value={form.city}
+                  onChange={(e) => set("city", e.target.value)}
+                  className="input"
+                  placeholder="Paris"
+                />
+              </Field>
+              <Field label="Pays *">
+                <input
+                  required
+                  value={form.country}
+                  onChange={(e) => set("country", e.target.value)}
+                  className="input"
+                  placeholder="France"
+                />
+              </Field>
+            </div>
+            <Field label="Site web">
+              <input
+                type="url"
+                value={form.venueWebsite}
+                onChange={(e) => set("venueWebsite", e.target.value)}
+                className="input"
+                placeholder="https://www.venue.com"
+              />
+            </Field>
+          </fieldset>
+
+          {/* Cachet */}
+          <fieldset className="space-y-3 rounded-xl border border-gray-800 p-4">
+            <legend className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cachet</legend>
+            <Field label="Montant (€)">
               <input
                 type="number"
                 value={form.fee}
@@ -458,59 +501,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
                 placeholder="0"
               />
             </Field>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Ville *">
-              <input
-                required
-                value={form.city}
-                onChange={(e) => set("city", e.target.value)}
-                className="input"
-                placeholder="Paris"
-              />
-            </Field>
-            <Field label="Pays *">
-              <input
-                required
-                value={form.country}
-                onChange={(e) => set("country", e.target.value)}
-                className="input"
-                placeholder="France"
-              />
-            </Field>
-          </div>
-
-          <Field label="Adresse">
-            <input
-              value={form.venueAddress1}
-              onChange={(e) => set("venueAddress1", e.target.value)}
-              className="input"
-              placeholder="123 rue de la Musique"
-            />
-          </Field>
-
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="Code postal">
-              <input
-                value={form.venuePostalCode}
-                onChange={(e) => set("venuePostalCode", e.target.value)}
-                className="input"
-                placeholder="75001"
-              />
-            </Field>
-            <div className="col-span-2">
-              <Field label="Site web">
-                <input
-                  type="url"
-                  value={form.venueWebsite}
-                  onChange={(e) => set("venueWebsite", e.target.value)}
-                  className="input"
-                  placeholder="https://www.venue.com"
-                />
-              </Field>
-            </div>
-          </div>
+          </fieldset>
 
           {/* Status */}
           <Field label="Statut">

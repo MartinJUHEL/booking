@@ -99,8 +99,7 @@ export interface Booking {
   promoterId: string | null;
   promoterRel?: Promoter | null;
   venue: string;
-  venueAddress1: string | null;
-  venuePostalCode: string | null;
+  venueAddress: string | null;
   venueWebsite: string | null;
   city: string;
   country: string;

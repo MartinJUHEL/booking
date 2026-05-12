@@ -74,8 +74,7 @@ const SECTIONS: SectionDef[] = [
   {
     key: "venue", label: "Venue", fields: [
       { key: "venueName", label: "Name", type: "text" },
-      { key: "venueAddress1", label: "Address line 1", type: "text" },
-      { key: "venuePostalCode", label: "Postal code", type: "text" },
+      { key: "venueAddress", label: "Address", type: "text" },
       { key: "venueCity", label: "City", type: "text" },
       { key: "venueCountry", label: "Country - State", type: "text" },
       { key: "venueWebsite", label: "Website", type: "url" },
