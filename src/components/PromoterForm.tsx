@@ -15,7 +15,12 @@ export default function PromoterForm({ promoter, onSave, onClose }: Props) {
     email: promoter?.email || "",
     phone: promoter?.phone || "",
     company: promoter?.company || "",
-    headquarters: promoter?.headquarters || "",
+    address1: promoter?.address1 || "",
+    address2: promoter?.address2 || "",
+    postalCode: promoter?.postalCode || "",
+    city: promoter?.city || "",
+    country: promoter?.country || "",
+    companyWebsite: promoter?.companyWebsite || "",
     siret: promoter?.siret || "",
     ape: promoter?.ape || "",
     vatNumber: promoter?.vatNumber || "",
@@ -89,24 +94,67 @@ export default function PromoterForm({ promoter, onSave, onClose }: Props) {
           {/* Infos structure */}
           <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
             <h3 className="text-sm font-medium text-gray-300 mb-2">Informations de la structure</h3>
+            <Field label="Nom de la structure">
+              <input
+                value={form.company}
+                onChange={(e) => set("company", e.target.value)}
+                className="input"
+                placeholder="Live Nation SAS"
+              />
+            </Field>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Nom de la structure">
+              <Field label="Adresse ligne 1">
                 <input
-                  value={form.company}
-                  onChange={(e) => set("company", e.target.value)}
+                  value={form.address1}
+                  onChange={(e) => set("address1", e.target.value)}
                   className="input"
-                  placeholder="Live Nation SAS"
+                  placeholder="123 rue de la Musique"
                 />
               </Field>
-              <Field label="Siège social">
+              <Field label="Adresse ligne 2">
                 <input
-                  value={form.headquarters}
-                  onChange={(e) => set("headquarters", e.target.value)}
+                  value={form.address2}
+                  onChange={(e) => set("address2", e.target.value)}
                   className="input"
-                  placeholder="123 rue de la Musique, 75001 Paris"
+                  placeholder="Bâtiment A"
                 />
               </Field>
             </div>
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="Code postal">
+                <input
+                  value={form.postalCode}
+                  onChange={(e) => set("postalCode", e.target.value)}
+                  className="input"
+                  placeholder="75001"
+                />
+              </Field>
+              <Field label="Ville">
+                <input
+                  value={form.city}
+                  onChange={(e) => set("city", e.target.value)}
+                  className="input"
+                  placeholder="Paris"
+                />
+              </Field>
+              <Field label="Pays / État">
+                <input
+                  value={form.country}
+                  onChange={(e) => set("country", e.target.value)}
+                  className="input"
+                  placeholder="France"
+                />
+              </Field>
+            </div>
+            <Field label="Site web">
+              <input
+                type="url"
+                value={form.companyWebsite}
+                onChange={(e) => set("companyWebsite", e.target.value)}
+                className="input"
+                placeholder="https://www.example.com"
+              />
+            </Field>
             <div className="grid grid-cols-3 gap-4">
               <Field label="SIRET">
                 <input

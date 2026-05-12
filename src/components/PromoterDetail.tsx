@@ -52,18 +52,32 @@ export default function PromoterDetail({
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</h3>
             <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
               <CopyField label="Nom" value={promoter.name} />
-              <CopyField label="Société" value={promoter.company} />
               <CopyField label="Email" value={promoter.email} />
               <CopyField label="Téléphone" value={promoter.phone} />
             </div>
           </section>
 
+          {/* Structure */}
+          {(promoter.company || promoter.address1 || promoter.city || promoter.companyWebsite) && (
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Structure</h3>
+              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
+                <CopyField label="Société" value={promoter.company} />
+                <CopyField label="Adresse" value={promoter.address1} />
+                {promoter.address2 && <CopyField label="Adresse (suite)" value={promoter.address2} />}
+                <CopyField label="Code postal" value={promoter.postalCode} mono />
+                <CopyField label="Ville" value={promoter.city} />
+                <CopyField label="Pays" value={promoter.country} />
+                <CopyField label="Site web" value={promoter.companyWebsite} />
+              </div>
+            </section>
+          )}
+
           {/* Informations légales */}
-          {(promoter.headquarters || promoter.siret || promoter.ape || promoter.vatNumber) && (
+          {(promoter.siret || promoter.ape || promoter.vatNumber) && (
             <section className="space-y-3">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Informations légales</h3>
               <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
-                <CopyField label="Siège social" value={promoter.headquarters} />
                 <CopyField label="SIRET" value={promoter.siret} mono />
                 <CopyField label="Code APE" value={promoter.ape} mono />
                 <CopyField label="N° TVA" value={promoter.vatNumber} mono />

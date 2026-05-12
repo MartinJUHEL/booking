@@ -32,7 +32,7 @@ interface AdvancingForm {
 interface FieldDef {
   key: string;
   label: string;
-  type: "text" | "url" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean";
+  type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean";
   readonly?: boolean;
   options?: string[];
 }
@@ -66,6 +66,9 @@ const SECTIONS: SectionDef[] = [
       { key: "phone", label: "Phone", type: "tel" },
       { key: "companyWebsite", label: "Company website", type: "url" },
       { key: "vatNumber", label: "VAT/Tax number", type: "text" },
+      { key: "email", label: "Email", type: "email" },
+      { key: "siret", label: "SIRET", type: "text" },
+      { key: "ape", label: "Code APE", type: "text" },
     ],
   },
   {

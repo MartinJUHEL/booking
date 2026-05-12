@@ -4,7 +4,12 @@ export interface Promoter {
   email: string | null;
   phone: string | null;
   company: string | null;
-  headquarters: string | null;
+  address1: string | null;
+  address2: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  companyWebsite: string | null;
   siret: string | null;
   ape: string | null;
   vatNumber: string | null;

@@ -148,8 +148,8 @@ export default function BookingDetail({
                     {booking.promoterRel.phone && (
                       <p className="text-xs text-gray-400">Tél : {booking.promoterRel.phone}</p>
                     )}
-                    {booking.promoterRel.headquarters && (
-                      <p className="text-xs text-gray-400">Siège : {booking.promoterRel.headquarters}</p>
+                    {booking.promoterRel.address1 && (
+                      <p className="text-xs text-gray-400">Adresse : {booking.promoterRel.address1}</p>
                     )}
                     {booking.promoterRel.vatNumber && (
                       <p className="text-xs text-gray-400">TVA : {booking.promoterRel.vatNumber}</p>

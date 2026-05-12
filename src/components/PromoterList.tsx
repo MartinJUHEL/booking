@@ -55,9 +55,9 @@ export default function PromoterList({ promoters, onEdit, onDelete, onSelect, re
             </div>
           )}
 
-          {(p.vatNumber || p.headquarters || p.siret || p.ape || p.signatory) && (
+          {(p.vatNumber || p.address1 || p.siret || p.ape || p.signatory) && (
             <div className="text-xs text-gray-500 border-t border-gray-800 pt-3 mt-3 space-y-1">
-              {p.headquarters && <p>Siège : {p.headquarters}</p>}
+              {p.address1 && <p>Adresse : {p.address1}</p>}
               {p.siret && <p>SIRET : {p.siret}</p>}
               {p.ape && <p>APE : {p.ape}</p>}
               {p.vatNumber && <p>TVA : {p.vatNumber}</p>}
