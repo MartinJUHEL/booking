@@ -415,7 +415,6 @@ export default function AdvancingPage({ params }: { params: Promise<{ formId: st
   const getFieldStatus = (section: string, key: string) => {
     const fv = form.fieldValues.find(v => v.section === section && v.fieldKey === key);
     if (!fv) return "empty";
-    if (fv.rejectionComment) return "rejected";
     if (fv.validatedAt) return "validated";
     if (fv.sentAt) return "sent";
     return "saved";
@@ -689,13 +688,11 @@ function Field({
 
   const isSent = !!fieldValue?.sentAt;
   const isValidated = !!fieldValue?.validatedAt;
-  const isRejected = !isValidated && !!fieldValue?.rejectionComment;
   const isSaved = status === "saved" && !isSent;
   const canSend = !readOnly && !!localValue && !isValidated && !isSent;
 
   const statusBorder =
     isValidated ? "border-green-500/50" :
-    isRejected ? "border-red-500/50" :
     isSent ? "border-purple-500/30" :
     isSaved ? "border-blue-500/30" :
     "border-gray-700";
@@ -709,14 +706,10 @@ function Field({
         <div className="flex items-center gap-2">
           {saving && <span className="text-xs text-gray-500">...</span>}
           {isValidated && <span className="text-xs text-green-400">Validated</span>}
-          {isSent && !isValidated && <span className="text-xs text-purple-400">Sent</span>}
-          {isRejected && <span className="text-xs text-red-400">!</span>}
-          {isSaved && !isSent && <span className="text-xs text-blue-400">Saved</span>}
+           {isSent && !isValidated && <span className="text-xs text-purple-400">Sent</span>}
+           {isSaved && !isSent && <span className="text-xs text-blue-400">Saved</span>}
         </div>
       </div>
-      {isRejected && fieldValue?.rejectionComment && (
-        <p className="text-xs text-red-400 mb-1">Rejected: {fieldValue.rejectionComment} — please update and re-send</p>
-      )}
       <div className="flex gap-2">
         <div className="flex-1">
           {field.type === "venue-search" ? (

@@ -241,24 +241,7 @@ function AdvancingReviewPanel({
     } finally {
       setValidatingId(null);
     }
-  }
-
-  async function handleReject(fieldValue: AdvancingFieldValue) {
-    const comment = prompt("Commentaire de rejet (optionnel) :");
-    setValidatingId(fieldValue.id);
-    try {
-      const updated = await api.put<AdvancingFieldValue>(`/api/advancing/fields/${fieldValue.id}/reject`, { comment });
-      setLocalForm(prev => ({
-        ...prev,
-        fieldValues: prev.fieldValues.map(fv => fv.id === fieldValue.id ? updated : fv),
-      }));
-      onUpdate();
-    } catch {
-      // ignore
-    } finally {
-      setValidatingId(null);
-    }
-  }
+   }
 
   const getFieldValue = (section: string, key: string): AdvancingFieldValue | undefined => {
     return localForm.fieldValues.find(fv => fv.section === section && fv.fieldKey === key);
@@ -312,7 +295,6 @@ function AdvancingReviewPanel({
               getFieldValue={getFieldValue}
               validatingId={validatingId}
               onValidate={handleValidate}
-              onReject={handleReject}
             />
           ))}
         </div>
@@ -326,13 +308,11 @@ function ReviewSection({
   getFieldValue,
   validatingId,
   onValidate,
-  onReject,
 }: {
   section: SectionDef;
   getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
   validatingId: string | null;
   onValidate: (fv: AdvancingFieldValue) => void;
-  onReject: (fv: AdvancingFieldValue) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -369,7 +349,6 @@ function ReviewSection({
                 fieldValue={fv}
                 validating={validatingId === fv.id}
                 onValidate={() => onValidate(fv)}
-                onReject={() => onReject(fv)}
               />
             );
           })}
@@ -411,16 +390,13 @@ function ReviewField({
   fieldValue,
   validating,
   onValidate,
-  onReject,
 }: {
   field: FieldDef;
   fieldValue: AdvancingFieldValue;
   validating: boolean;
   onValidate: () => void;
-  onReject: () => void;
 }) {
   const isValidated = !!fieldValue.validatedAt;
-  const isRejected = !isValidated && fieldValue.rejectionComment != null;
 
   // Format display value
   let displayValue = fieldValue.value || "—";
@@ -429,14 +405,11 @@ function ReviewField({
   }
 
   return (
-    <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : isRejected ? "bg-red-500/5" : ""}`}>
+    <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : ""}`}>
       {/* Label + value */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gray-500">{field.label}</p>
         <p className="text-sm text-gray-200 break-words">{displayValue}</p>
-        {isRejected && fieldValue.rejectionComment && (
-          <p className="text-xs text-red-400 mt-1">Rejet : {fieldValue.rejectionComment}</p>
-        )}
       </div>
 
       {/* Actions */}
@@ -446,23 +419,13 @@ function ReviewField({
             Valide
           </span>
         ) : (
-          <>
-            <button
-              onClick={onValidate}
-              disabled={validating}
-              className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
-            >
-              {validating ? "..." : "Valider"}
-            </button>
-            <button
-              onClick={onReject}
-              disabled={validating}
-              className="text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
-              title="Rejeter"
-            >
-              ✗
-            </button>
-          </>
+          <button
+            onClick={onValidate}
+            disabled={validating}
+            className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
+          >
+            {validating ? "..." : "Valider"}
+          </button>
         )}
       </div>
     </div>

@@ -195,9 +195,8 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - Progress bar showing validated/total sent fields
 - Sections as collapsible accordions with per-section progress counters
 - Only shows fields the promoter has **sent** (not drafts)
-- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking), **"x" button** (reject with comment)
+- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking)
 - Validated fields show green "Valide" badge
-- Rejected fields: promoter sees rejection message, can re-edit and re-send
 
 ### Public Advancing Page (`/advancing/[formId]`)
 - **Step 1**: Email input → request verification code
@@ -211,7 +210,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - **Venue autocomplete**: the `venueName` field uses a `venue-search` type with autocomplete via `/api/venues/search`. Selecting a result auto-fills `venueAddress`, `venueCity`, `venueCountry` via an `onAutoFill` callback
 - **Hotel autocomplete**: the `hotelName` field uses a `hotel-search` type with autocomplete via `/api/places/search` (Google Places). Selecting a result auto-fills `hotelAddress` via `onAutoFill`
 - Section headers show sent/total counter (e.g. "3/7 sent")
-- Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker), rejected (red with booker's comment)
+- Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker)
 - Token expiry: re-entering email + new code restores access (data persisted server-side)
 - Uses direct `fetch()` with advancing JWT (not `api-client.ts` which uses the main JWT)
 
