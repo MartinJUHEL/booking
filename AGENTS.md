@@ -108,6 +108,8 @@ interface Hotel {
   bookingNumber: string | null;
   breakfast: boolean;
   lateCheckout: boolean;
+  checkIn: string | null;
+  notes: string | null;
 }
 ```
 
@@ -172,7 +174,7 @@ The frontend uses a list/detail split to minimize API payload:
 
 Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) which fetches the full booking detail from `GET /api/bookings/{id}`. It shows:
 - Event info (date, venue, city, promoter, status, fee)
-- **Hotel/lodging** (name, address with Google Maps link, booking number, breakfast/late checkout tags)
+- **Hotel/lodging** (name, address with Google Maps link, booking number, check-in, breakfast/late checkout tags, additional notes)
 - **Transport** info with ticket download links
 - Checklist (contract, fees)
 - Notes
@@ -214,12 +216,15 @@ The advancing feature allows bookers to send a form link to promoters to collect
 ## Promoter Detail Panel
 
 Clicking a promoter card in `PromoterList` opens a slide-in side panel (`PromoterDetail`) which displays all promoter fields organized in sections:
-- **Contact**: name, company, email, phone
-- **Legal info**: headquarters, SIRET, APE, VAT number
+- **Contact**: name, email, phone
+- **Structure**: company, address (line 1 + 2), postal code, city, country, website
+- **Legal info**: SIRET, APE, VAT number
 - **Signatory**: name and role
 - **Notes** and **Statistics** (booking count)
 
 Each field has a **click-to-copy** feature for easy use in invoices/contracts. The panel has a "Modifier" button to open the edit form.
+
+All promoter fields (company, address, email, phone, siret, ape, vatNumber, companyWebsite) are synced bidirectionally with the advancing form `promoter` section. Hotel fields (name, address, bookingNumber, checkIn, lateCheckout, breakfast, notes) are synced with the advancing form `hotel` section; validating any hotel field via advancing auto-sets `hotel.booked = true`.
 
 ## Environment Variables
 
