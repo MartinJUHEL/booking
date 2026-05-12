@@ -43,7 +43,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
-| `src/app/agency/page.tsx` | Agency management (booker-only): invite members, list members, pending invitations |
+| `src/app/agency/page.tsx` | Agency management (booker-only): invite members, list members (owner can remove), pending invitations |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/Dashboard.tsx` | Artist dashboard (read-only): Table / Calendar / Promoters tabs, no create/edit/delete |
@@ -146,7 +146,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 
 ### Booker
 - **Belongs to an Agency** — created during onboarding. Other bookers join via ephemeral invitation links (5-min expiry, sent by email from `/agency` page)
-- **Agency management page** (`/agency`): invite bookers by email, view members, view pending invitations
+- **Agency management page** (`/agency`): invite bookers by email, view members (owner sees "Admin" badge and remove buttons), view pending invitations
 - **Join flow** (`/agency/join/[token]`): booker clicks invitation link from email, authenticates if needed (stores redirect in `localStorage`), sees agency info, clicks "Rejoindre". Email must match invitation. Link expires after 5 minutes (HTTP 410).
 - **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering)
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)

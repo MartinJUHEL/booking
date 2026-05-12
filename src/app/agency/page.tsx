@@ -9,6 +9,7 @@ import { api } from "@/lib/api-client";
 interface Agency {
   id: string;
   name: string;
+  ownerId: string;
   memberCount: number;
   createdAt: string;
 }
@@ -43,6 +44,8 @@ export default function AgencyPage() {
   const [inviting, setInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const isOwner = agency?.ownerId === user?.id;
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -95,6 +98,18 @@ export default function AgencyPage() {
       setInviteError(message);
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleRemoveMember(memberId: string, memberName: string) {
+    if (!confirm(`Retirer ${memberName} de l'agence ?`)) return;
+    try {
+      await api.delete(`/api/agency/members/${memberId}`);
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      if (agency) setAgency({ ...agency, memberCount: agency.memberCount - 1 });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur";
+      alert(message);
     }
   }
 
@@ -221,6 +236,9 @@ export default function AgencyPage() {
                     <div className="flex-1">
                       <div className="text-sm font-medium">
                         {member.name || member.email}
+                        {member.id === agency?.ownerId && (
+                          <span className="text-purple-400 text-xs ml-2">Admin</span>
+                        )}
                         {member.id === user.id && (
                           <span className="text-gray-500 text-xs ml-2">(vous)</span>
                         )}
@@ -229,6 +247,15 @@ export default function AgencyPage() {
                         <div className="text-xs text-gray-500">{member.email}</div>
                       )}
                     </div>
+                    {isOwner && member.id !== user.id && (
+                      <button
+                        onClick={() => handleRemoveMember(member.id, member.name || member.email)}
+                        className="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                        title="Retirer de l'agence"
+                      >
+                        &times;
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
