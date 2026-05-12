@@ -30,14 +30,7 @@ function HomeContent() {
 
   const [artists, setArtists] = useState<Artist[]>([]);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
-
-  // Add artist form state
-  const [addArtistEmail, setAddArtistEmail] = useState("");
-  const [addingArtist, setAddingArtist] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
 
   // Pending invitations for artists
   const [pendingInvitations, setPendingInvitations] = useState<Array<{
@@ -95,35 +88,6 @@ function HomeContent() {
     loadData();
   }, [user, isBooker]);
 
-  async function handleAddArtist(e: React.FormEvent) {
-    e.preventDefault();
-    if (!addArtistEmail) return;
-    setAddingArtist(true);
-    setInviteMessage(null);
-    setInviteError(null);
-    try {
-      await api.post("/api/artists", { email: addArtistEmail });
-      setInviteMessage(`Invitation envoyee a ${addArtistEmail}. L'artiste doit accepter l'invitation.`);
-      setAddArtistEmail("");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erreur lors de l'envoi de l'invitation";
-      setInviteError(message);
-    } finally {
-      setAddingArtist(false);
-    }
-  }
-
-  async function handleRemoveArtist(artistId: string, artistName: string) {
-    if (!confirm(`Retirer ${artistName} de votre liste ?`)) return;
-    try {
-      await api.delete(`/api/artists/${artistId}`);
-      setArtists(prev => prev.filter(a => a.id !== artistId));
-      if (selectedArtistId === artistId) setSelectedArtistId(null);
-    } catch (err) {
-      console.error("Failed to remove artist:", err);
-    }
-  }
-
   async function handleRespondInvitation(token: string, accept: boolean) {
     try {
       await api.post(`/api/artists/invitations/${token}/${accept ? "accept" : "reject"}`);
@@ -169,34 +133,16 @@ function HomeContent() {
         <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="text-center py-20">
-            <div className="text-5xl mb-4">🎵</div>
             <h2 className="text-xl font-bold mb-2">Aucun artiste</h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              Ajoutez un artiste pour commencer a gerer ses bookings. L&apos;artiste doit avoir un compte sur la plateforme.
+            <p className="text-gray-400 mb-6 max-w-md mx-auto">
+              Ajoutez des artistes depuis la page Agence pour commencer a gerer leurs bookings.
             </p>
-            <form onSubmit={handleAddArtist} className="flex gap-2 max-w-md mx-auto">
-              <input
-                type="email"
-                value={addArtistEmail}
-                onChange={(e) => setAddArtistEmail(e.target.value)}
-                placeholder="Email de l'artiste"
-                required
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-              />
-              <button
-                type="submit"
-                disabled={addingArtist}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-              >
-                {addingArtist ? "..." : "Inviter"}
-              </button>
-            </form>
-            {inviteMessage && (
-              <p className="text-green-400 text-sm mt-4">{inviteMessage}</p>
-            )}
-            {inviteError && (
-              <p className="text-red-400 text-sm mt-4">{inviteError}</p>
-            )}
+            <Link
+              href="/agency"
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors inline-block"
+            >
+              Gerer mes artistes
+            </Link>
           </div>
         </main>
       </div>
@@ -210,45 +156,6 @@ function HomeContent() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {isBooker ? (
           <>
-            {/* Artist management bar */}
-            <div className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-              <form onSubmit={handleAddArtist} className="flex gap-2">
-                <input
-                  type="email"
-                  value={addArtistEmail}
-                  onChange={(e) => setAddArtistEmail(e.target.value)}
-                  placeholder="Email de l'artiste"
-                  required
-                  className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                />
-                <button
-                  type="submit"
-                  disabled={addingArtist}
-                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  {addingArtist ? "..." : "Inviter un artiste"}
-                </button>
-              </form>
-              {inviteMessage && <span className="text-green-400 text-sm">{inviteMessage}</span>}
-              {inviteError && <span className="text-red-400 text-sm">{inviteError}</span>}
-            </div>
-
-            {/* Artist chips with remove */}
-            <div className="mb-4 flex flex-wrap gap-2">
-              {artists.map(a => (
-                <span key={a.id} className="inline-flex items-center gap-1.5 bg-gray-800 border border-gray-700 rounded-full px-3 py-1 text-sm">
-                  <span className="text-purple-400 font-medium">{a.artistName || a.name || a.email}</span>
-                  <button
-                    onClick={() => handleRemoveArtist(a.id, a.artistName || a.name || a.email)}
-                    className="text-gray-500 hover:text-red-400 transition-colors ml-1"
-                    title="Retirer cet artiste"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-            </div>
-
             <BookerDashboard artists={artists} />
           </>
         ) : (

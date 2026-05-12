@@ -157,8 +157,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
-- **Invites artists by email** (sends invitation, artist must accept) — artists are linked to the agency (via `AgencyArtist`), visible to all bookers in the agency
-- **Artist chips** with remove button (`×`) to sever the link
+- **Artists are managed from the Agency page** (`/agency`) — invite by email, list with remove buttons. Dashboard only shows bookings.
 - Can send advancing form links to promoters and validate sent fields one by one
 - **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`. "Agence" link shown instead.
 - `/onboarding` page: step 1 = role selection, step 2 = agency creation (bookers without an agency are redirected back here; joining is only via invitation link)
