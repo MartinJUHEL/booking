@@ -5,7 +5,7 @@ import type { Promoter } from "./types";
 
 interface Props {
   promoter: Promoter | null;
-  onSave: (data: Partial<Promoter>) => void;
+  onSave: (data: Partial<Promoter>) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -24,13 +24,20 @@ export default function PromoterForm({ promoter, onSave, onClose }: Props) {
     notes: promoter?.notes || "",
   });
 
+  const [saving, setSaving] = useState(false);
+
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave(form as Partial<Promoter>);
+    setSaving(true);
+    try {
+      await onSave(form as Partial<Promoter>);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -167,9 +174,10 @@ export default function PromoterForm({ promoter, onSave, onClose }: Props) {
             </button>
             <button
               type="submit"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+              disabled={saving}
+              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
             >
-              {promoter ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : promoter ? "Enregistrer" : "Ajouter"}
             </button>
           </div>
         </form>

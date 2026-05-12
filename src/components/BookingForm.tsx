@@ -14,7 +14,7 @@ interface VenueResult {
 interface Props {
   booking: Booking | null;
   promoters: Promoter[];
-  onSave: (data: Partial<Booking>) => void;
+  onSave: (data: Partial<Booking>) => void | Promise<void>;
   onClose: () => void;
   onPromoterCreated?: (promoter: Promoter) => void;
   artistId?: string;
@@ -93,13 +93,20 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const data = { ...form, fee: parseFloat(form.fee) || 0 };
     if (promoterMode === "new") {
       data.promoterId = "";
     }
-    onSave(data as Partial<Booking>);
+    setSaving(true);
+    try {
+      await onSave(data as Partial<Booking>);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function selectPromoter(id: string) {
@@ -724,9 +731,10 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
             </button>
             <button
               type="submit"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+              disabled={saving}
+              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
             >
-              {booking ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : booking ? "Enregistrer" : "Ajouter"}
             </button>
           </div>
         </form>

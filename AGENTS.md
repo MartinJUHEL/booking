@@ -240,6 +240,7 @@ Each field has a **click-to-copy** feature for easy use in invoices/contracts. T
 - **Hotel autocomplete** calls `GET /api/places/search?q=` on the backend (no Google Maps JS SDK on the frontend)
 - **Advancing page** (`/advancing/[formId]`) is the only page that uses direct `fetch()` instead of `api-client.ts`, because it uses a separate advancing JWT (not the main user JWT)
 - **Advancing review** is only visible to bookers — the `BookingDetail` component receives a `role` prop and conditionally renders the `AdvancingReview` component
+- **Loading states on submit buttons**: every form that triggers an API call (create/update) must have a `saving` state: button shows "Enregistrement..." text, is `disabled`, and has `disabled:opacity-50 disabled:cursor-not-allowed` classes. The `onSave` prop type should be `() => void | Promise<void>` to support async handlers. Pattern: wrap `await onSave(...)` in `setSaving(true)` / `finally { setSaving(false) }`.
 
 ## Deployment
 
