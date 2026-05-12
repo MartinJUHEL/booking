@@ -202,13 +202,14 @@ The advancing feature allows bookers to send a form link to promoters to collect
 ### Public Advancing Page (`/advancing/[formId]`)
 - **Step 1**: Email input → request verification code
 - **Step 2**: 6-digit code input → verify → get advancing JWT (stored in `localStorage`)
-- **Step 3**: Multi-section form with accordions, auto-save on blur/change (500ms debounce)
+- **Step 3**: Multi-section form with accordions, auto-save on blur/change (1500ms debounce, immediate save on blur). Uses `isFocusedRef` to prevent server state from overwriting local input while typing.
 - **Pre-filled fields**: fields already filled by the booker at booking creation appear as validated (green badge, greyed out `opacity-60`, read-only). The promoter cannot modify or re-send them.
 - **Per-field "Send" button**: each non-validated field has a "Send" button next to it. Promoter fills a field (auto-saved as draft) then clicks "Send" to make it visible to the booker
 - **No global "Submit" button** — fields are sent individually
 - **Validated fields are locked**: inputs are `readOnly`, the "Send" button is hidden, backend also rejects save/send attempts (400)
 - Sections: Show, Promoter, Venue, Tickets, Contacts, Event Details, Hotel, Dinner, Arrival, Show Transfers, Departure
 - **Venue autocomplete**: the `venueName` field uses a `venue-search` type with autocomplete via `/api/venues/search`. Selecting a result auto-fills `venueAddress`, `venueCity`, `venueCountry` via an `onAutoFill` callback
+- **Hotel autocomplete**: the `hotelName` field uses a `hotel-search` type with autocomplete via `/api/places/search` (Google Places). Selecting a result auto-fills `hotelAddress` via `onAutoFill`
 - Section headers show sent/total counter (e.g. "3/7 sent")
 - Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker), rejected (red with booker's comment)
 - Token expiry: re-entering email + new code restores access (data persisted server-side)

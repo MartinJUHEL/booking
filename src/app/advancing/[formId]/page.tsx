@@ -32,7 +32,7 @@ interface AdvancingForm {
 interface FieldDef {
   key: string;
   label: string;
-  type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean" | "venue-search";
+  type: "text" | "url" | "email" | "number" | "time" | "date" | "datetime" | "tel" | "textarea" | "select" | "boolean" | "venue-search" | "hotel-search";
   readonly?: boolean;
   options?: string[];
 }
@@ -108,7 +108,7 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "hotel", label: "Hotel", fields: [
-      { key: "hotelName", label: "Hotel name", type: "text" },
+      { key: "hotelName", label: "Hotel name", type: "hotel-search" },
       { key: "hotelBookingNumber", label: "Booking reference", type: "text" },
       { key: "hotelAddress", label: "Address", type: "text" },
       { key: "hotelCheckIn", label: "Check in", type: "datetime" },
@@ -551,6 +551,8 @@ function Field({
   const [localValue, setLocalValue] = useState(value);
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
+  const isFocusedRef = useRef(false);
+
   // Venue search state
   const [venueResults, setVenueResults] = useState<{ name: string; address: string; city: string; country: string }[]>([]);
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -558,12 +560,31 @@ function Field({
   const venueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const venueWrapperRef = useRef<HTMLDivElement>(null);
 
+  // Hotel search state
+  const [hotelResults, setHotelResults] = useState<{ placeId: string; name: string; address: string; secondaryText: string | null }[]>([]);
+  const [showHotelDropdown, setShowHotelDropdown] = useState(false);
+  const [hotelLoading, setHotelLoading] = useState(false);
+  const hotelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hotelWrapperRef = useRef<HTMLDivElement>(null);
+
   // Close venue dropdown on outside click
   useEffect(() => {
     if (field.type !== "venue-search") return;
     function handleClick(e: MouseEvent) {
       if (venueWrapperRef.current && !venueWrapperRef.current.contains(e.target as Node)) {
         setShowVenueDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [field.type]);
+
+  // Close hotel dropdown on outside click
+  useEffect(() => {
+    if (field.type !== "hotel-search") return;
+    function handleClick(e: MouseEvent) {
+      if (hotelWrapperRef.current && !hotelWrapperRef.current.contains(e.target as Node)) {
+        setShowHotelDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -590,6 +611,37 @@ function Field({
     venueTimerRef.current = setTimeout(() => searchVenue(newValue), 350);
   }
 
+  const searchHotel = useCallback(async (query: string) => {
+    if (query.length < 3) { setHotelResults([]); setShowHotelDropdown(false); return; }
+    setHotelLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/places/search?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHotelResults(data);
+        setShowHotelDropdown(data.length > 0);
+      }
+    } catch { setHotelResults([]); }
+    finally { setHotelLoading(false); }
+  }, []);
+
+  function handleHotelChange(newValue: string) {
+    handleChange(newValue);
+    if (hotelTimerRef.current) clearTimeout(hotelTimerRef.current);
+    hotelTimerRef.current = setTimeout(() => searchHotel(newValue), 350);
+  }
+
+  function selectHotelResult(result: { placeId: string; name: string; address: string; secondaryText: string | null }) {
+    setLocalValue(result.name);
+    onSave(sectionKey, field.key, result.name);
+    setShowHotelDropdown(false);
+    setHotelResults([]);
+    // Auto-fill hotel address
+    if (result.address) {
+      onAutoFill([{ section: sectionKey, key: "hotelAddress", value: result.address }]);
+    }
+  }
+
   function selectVenueResult(result: { name: string; address: string; city: string; country: string }) {
     setLocalValue(result.name);
     onSave(sectionKey, field.key, result.name);
@@ -604,7 +656,10 @@ function Field({
   }
 
   useEffect(() => {
-    setLocalValue(value);
+    // Don't overwrite local value while the user is actively typing
+    if (!isFocusedRef.current) {
+      setLocalValue(value);
+    }
   }, [value]);
 
   function handleChange(newValue: string) {
@@ -614,11 +669,16 @@ function Field({
     if (debounceTimer) clearTimeout(debounceTimer);
     const timer = setTimeout(() => {
       onSave(sectionKey, field.key, newValue || null);
-    }, 500);
+    }, 1500);
     setDebounceTimer(timer);
   }
 
+  function handleFocus() {
+    isFocusedRef.current = true;
+  }
+
   function handleBlur() {
+    isFocusedRef.current = false;
     if (readOnly) return;
     if (debounceTimer) clearTimeout(debounceTimer);
     if (localValue !== value) {
@@ -663,7 +723,8 @@ function Field({
               <input
                 value={localValue}
                 onChange={e => handleVenueChange(e.target.value)}
-                onFocus={() => venueResults.length > 0 && setShowVenueDropdown(true)}
+                onFocus={() => { handleFocus(); venueResults.length > 0 && setShowVenueDropdown(true); }}
+                onBlur={handleBlur}
                 readOnly={readOnly || isValidated}
                 className={inputClass}
                 autoComplete="off"
@@ -692,10 +753,44 @@ function Field({
                 </ul>
               )}
             </div>
+          ) : field.type === "hotel-search" ? (
+            <div ref={hotelWrapperRef} className="relative">
+              <input
+                value={localValue}
+                onChange={e => handleHotelChange(e.target.value)}
+                onFocus={() => { handleFocus(); hotelResults.length > 0 && setShowHotelDropdown(true); }}
+                onBlur={handleBlur}
+                readOnly={readOnly || isValidated}
+                className={inputClass}
+                autoComplete="off"
+              />
+              {hotelLoading && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">...</span>
+              )}
+              {showHotelDropdown && (
+                <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+                  {hotelResults.map((r, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        onClick={() => selectHotelResult(r)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 transition-colors"
+                      >
+                        <span className="text-white">{r.name}</span>
+                        {r.address && (
+                          <span className="text-gray-400 ml-2 text-xs">{r.address}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ) : field.type === "textarea" ? (
             <textarea
               value={localValue}
               onChange={e => handleChange(e.target.value)}
+              onFocus={handleFocus}
               onBlur={handleBlur}
               readOnly={readOnly || isValidated}
               rows={3}
@@ -705,6 +800,7 @@ function Field({
             <select
               value={localValue}
               onChange={e => handleChange(e.target.value)}
+              onFocus={handleFocus}
               onBlur={handleBlur}
               disabled={readOnly || isValidated}
               className={inputClass}
@@ -737,6 +833,7 @@ function Field({
               type={field.type === "datetime" ? "datetime-local" : field.type}
               value={localValue}
               onChange={e => handleChange(e.target.value)}
+              onFocus={handleFocus}
               onBlur={handleBlur}
               readOnly={readOnly || isValidated}
               className={inputClass}
