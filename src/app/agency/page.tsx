@@ -31,19 +31,34 @@ interface Invitation {
   expiresAt: string;
 }
 
+interface Artist {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  artistName: string | null;
+}
+
 export default function AgencyPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [agency, setAgency] = useState<Agency | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Invite form
+  // Invite booker form
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Invite artist form
+  const [artistEmail, setArtistEmail] = useState("");
+  const [invitingArtist, setInvitingArtist] = useState(false);
+  const [artistMessage, setArtistMessage] = useState<string | null>(null);
+  const [artistError, setArtistError] = useState<string | null>(null);
 
   const isOwner = agency?.ownerId === user?.id;
 
@@ -59,14 +74,16 @@ export default function AgencyPage() {
     async function loadData() {
       setDataLoading(true);
       try {
-        const [agencyData, membersData, invitationsData] = await Promise.all([
+        const [agencyData, membersData, invitationsData, artistsData] = await Promise.all([
           api.get<Agency>("/api/agency"),
           api.get<Member[]>("/api/agency/members"),
           api.get<Invitation[]>("/api/agency/invitations"),
+          api.get<Artist[]>("/api/artists"),
         ]);
         setAgency(agencyData);
         setMembers(membersData);
         setInvitations(invitationsData);
+        setArtists(artistsData);
       } catch (err) {
         console.error("Failed to load agency data:", err);
       } finally {
@@ -107,6 +124,39 @@ export default function AgencyPage() {
       await api.delete(`/api/agency/members/${memberId}`);
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
       if (agency) setAgency({ ...agency, memberCount: agency.memberCount - 1 });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur";
+      alert(message);
+    }
+  }
+
+  async function handleInviteArtist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!artistEmail.trim()) return;
+    setInvitingArtist(true);
+    setArtistMessage(null);
+    setArtistError(null);
+
+    try {
+      await api.post("/api/artists", { email: artistEmail.trim() });
+      setArtistMessage(`Invitation envoyee a ${artistEmail}.`);
+      setArtistEmail("");
+      // Refresh artists list
+      const artistsData = await api.get<Artist[]>("/api/artists");
+      setArtists(artistsData);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur lors de l'envoi";
+      setArtistError(message);
+    } finally {
+      setInvitingArtist(false);
+    }
+  }
+
+  async function handleRemoveArtist(artistId: string, artistName: string) {
+    if (!confirm(`Retirer ${artistName} de votre liste d'artistes ?`)) return;
+    try {
+      await api.delete(`/api/artists/${artistId}`);
+      setArtists((prev) => prev.filter((a) => a.id !== artistId));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur";
       alert(message);
@@ -214,7 +264,7 @@ export default function AgencyPage() {
             )}
 
             {/* Members */}
-            <div>
+            <div className="mb-8">
               <h2 className="text-lg font-semibold mb-4">Membres</h2>
               <div className="space-y-2">
                 {members.map((member) => (
@@ -259,6 +309,75 @@ export default function AgencyPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Artists */}
+            <div className="mb-8 p-6 bg-gray-900 border border-gray-800 rounded-xl">
+              <h2 className="text-lg font-semibold mb-4">Artistes</h2>
+              <p className="text-gray-400 text-sm mb-4">
+                Invitez un artiste par email. Il recevra un lien pour accepter l&apos;invitation.
+              </p>
+              <form onSubmit={handleInviteArtist} className="flex gap-2 mb-4">
+                <input
+                  type="email"
+                  value={artistEmail}
+                  onChange={(e) => setArtistEmail(e.target.value)}
+                  placeholder="Email de l'artiste"
+                  required
+                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="submit"
+                  disabled={invitingArtist}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+                >
+                  {invitingArtist ? "..." : "Inviter"}
+                </button>
+              </form>
+              {artistMessage && (
+                <p className="text-green-400 text-sm mb-4">{artistMessage}</p>
+              )}
+              {artistError && (
+                <p className="text-red-400 text-sm mb-4">{artistError}</p>
+              )}
+
+              {artists.length === 0 ? (
+                <p className="text-gray-500 text-sm">Aucun artiste pour le moment.</p>
+              ) : (
+                <div className="space-y-2">
+                  {artists.map((artist) => (
+                    <div
+                      key={artist.id}
+                      className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3"
+                    >
+                      {artist.image ? (
+                        <img
+                          src={artist.image}
+                          alt=""
+                          className="w-8 h-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400">
+                          {(artist.artistName || artist.name || artist.email)[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {artist.artistName || artist.name || artist.email}
+                        </div>
+                        <div className="text-xs text-gray-500">{artist.email}</div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveArtist(artist.id, artist.artistName || artist.name || artist.email)}
+                        className="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                        title="Retirer l'artiste"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
