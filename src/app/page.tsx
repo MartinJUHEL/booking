@@ -345,6 +345,11 @@ function HeaderBar({
               Configuration
             </Link>
           )}
+          {isBooker && (
+            <Link href="/agency" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+              Agence
+            </Link>
+          )}
           <span className="text-sm text-gray-400">{user.name || user.email}</span>
           <button
             onClick={onLogout}

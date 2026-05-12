@@ -14,13 +14,10 @@ export default function OnboardingClient({ userName }: { userName: string }) {
   const [redirecting, setRedirecting] = useState(false);
 
   // Booker agency step
-  // If user already has role "booker" but no agency, skip to agency step
   const [step, setStep] = useState<"role" | "agency">(
     user?.role === "booker" && !user?.agencyId ? "agency" : "role"
   );
-  const [agencyMode, setAgencyMode] = useState<"create" | "join" | null>(null);
   const [agencyName, setAgencyName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [agencyError, setAgencyError] = useState("");
 
   async function handleSubmit() {
@@ -33,7 +30,6 @@ export default function OnboardingClient({ userName }: { userName: string }) {
         api.setToken(result.token);
       }
 
-      // For bookers, handle agency step
       if (role === "booker") {
         await refreshUser();
         setStep("agency");
@@ -55,11 +51,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
     setSaving(true);
 
     try {
-      if (agencyMode === "create") {
-        await api.post("/api/agency", { name: agencyName.trim() });
-      } else if (agencyMode === "join") {
-        await api.post("/api/agency/join", { inviteCode: inviteCode.trim().toUpperCase() });
-      }
+      await api.post("/api/agency", { name: agencyName.trim() });
       await refreshUser();
       setRedirecting(true);
       router.push("/");
@@ -84,73 +76,24 @@ export default function OnboardingClient({ userName }: { userName: string }) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-lg w-full mx-4">
           <div className="text-center mb-4"><span className="text-2xl font-bold">Gigflow</span></div>
-          <h1 className="text-2xl font-bold mb-2 text-center">Votre agence</h1>
+          <h1 className="text-2xl font-bold mb-2 text-center">Creer votre agence</h1>
           <p className="text-gray-400 mb-8 text-center">
-            Creez une nouvelle agence ou rejoignez-en une existante.
+            Creez votre agence pour commencer a gerer vos artistes.
+            Vous pourrez ensuite inviter d&apos;autres bookers a vous rejoindre.
           </p>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <button
-              onClick={() => { setAgencyMode("create"); setAgencyError(""); }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${
-                agencyMode === "create"
-                  ? "border-purple-500 bg-purple-500/10"
-                  : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
-              }`}
-            >
-              <div className="text-3xl mb-3">🏢</div>
-              <div className="font-semibold mb-1">Creer</div>
-              <div className="text-sm text-gray-400">
-                Nouvelle agence dont vous serez l&apos;administrateur.
-              </div>
-            </button>
-
-            <button
-              onClick={() => { setAgencyMode("join"); setAgencyError(""); }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${
-                agencyMode === "join"
-                  ? "border-purple-500 bg-purple-500/10"
-                  : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
-              }`}
-            >
-              <div className="text-3xl mb-3">🔗</div>
-              <div className="font-semibold mb-1">Rejoindre</div>
-              <div className="text-sm text-gray-400">
-                Entrez le code d&apos;invitation de votre agence.
-              </div>
-            </button>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Nom de l&apos;agence
+            </label>
+            <input
+              type="text"
+              value={agencyName}
+              onChange={(e) => setAgencyName(e.target.value)}
+              placeholder="Ex: Stellar Bookings"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+            />
           </div>
-
-          {agencyMode === "create" && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Nom de l&apos;agence
-              </label>
-              <input
-                type="text"
-                value={agencyName}
-                onChange={(e) => setAgencyName(e.target.value)}
-                placeholder="Ex: Stellar Bookings"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          )}
-
-          {agencyMode === "join" && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Code d&apos;invitation
-              </label>
-              <input
-                type="text"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                placeholder="Ex: A1B2C3D4"
-                maxLength={8}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm font-mono tracking-widest focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          )}
 
           {agencyError && (
             <div className="mb-4 text-red-400 text-sm text-center">{agencyError}</div>
@@ -158,11 +101,15 @@ export default function OnboardingClient({ userName }: { userName: string }) {
 
           <button
             onClick={handleAgencySubmit}
-            disabled={!agencyMode || saving || (agencyMode === "create" && !agencyName.trim()) || (agencyMode === "join" && inviteCode.trim().length < 8)}
+            disabled={saving || !agencyName.trim()}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium py-3 px-6 rounded-lg transition-colors"
           >
-            {saving ? "..." : "Continuer"}
+            {saving ? "..." : "Creer l'agence"}
           </button>
+
+          <p className="text-gray-500 text-xs text-center mt-4">
+            Si vous avez recu un lien d&apos;invitation, utilisez-le directement pour rejoindre une agence existante.
+          </p>
         </div>
       </div>
     );
@@ -188,7 +135,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
                 : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
             }`}
           >
-            <div className="text-3xl mb-3">🎵</div>
+            <div className="text-3xl mb-3">&#x1F3B5;</div>
             <div className="font-semibold mb-1">Artiste</div>
             <div className="text-sm text-gray-400">
               Gerez vos dates, contrats et logistique.
@@ -203,7 +150,7 @@ export default function OnboardingClient({ userName }: { userName: string }) {
                 : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
             }`}
           >
-            <div className="text-3xl mb-3">📋</div>
+            <div className="text-3xl mb-3">&#x1F4CB;</div>
             <div className="font-semibold mb-1">Booker</div>
             <div className="text-sm text-gray-400">
               Gerez plusieurs artistes et leurs bookings.
