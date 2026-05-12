@@ -135,6 +135,34 @@ export default function BookingDetail({
               <div>
                 <p className="text-xs text-gray-500">Promoteur</p>
                 <p className="text-sm text-gray-300">{booking.promoter}</p>
+                {booking.promoterRel && (
+                  <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-700">
+                    {booking.promoterRel.company && (
+                      <p className="text-xs text-gray-400">Société : {booking.promoterRel.company}</p>
+                    )}
+                    {booking.promoterRel.email && (
+                      <p className="text-xs text-gray-400">Email : {booking.promoterRel.email}</p>
+                    )}
+                    {booking.promoterRel.phone && (
+                      <p className="text-xs text-gray-400">Tél : {booking.promoterRel.phone}</p>
+                    )}
+                    {booking.promoterRel.headquarters && (
+                      <p className="text-xs text-gray-400">Siège : {booking.promoterRel.headquarters}</p>
+                    )}
+                    {booking.promoterRel.vatNumber && (
+                      <p className="text-xs text-gray-400">TVA : {booking.promoterRel.vatNumber}</p>
+                    )}
+                    {booking.promoterRel.siret && (
+                      <p className="text-xs text-gray-400">SIRET : {booking.promoterRel.siret}</p>
+                    )}
+                    {booking.promoterRel.signatory && (
+                      <p className="text-xs text-gray-400">
+                        Signataire : {booking.promoterRel.signatory}
+                        {booking.promoterRel.signatoryRole && ` (${booking.promoterRel.signatoryRole})`}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </section>
