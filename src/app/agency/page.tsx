@@ -412,15 +412,29 @@ export default function AgencyPage() {
                                     href={artist.presskitUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs text-purple-400 hover:text-purple-300 truncate max-w-xs transition-colors"
+                                    className="inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors bg-purple-500/10 px-2.5 py-1 rounded-md"
+                                    title="Ouvrir le presskit"
                                   >
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V10m-4-8h5m0 0v5m0-5L7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
                                     Presskit
                                   </a>
                                   <button
                                     onClick={() => handleCopyPresskit(artist.id, artist.presskitUrl!)}
-                                    className="text-xs text-gray-500 hover:text-white transition-colors"
+                                    className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors bg-gray-800 px-2 py-1 rounded-md border border-gray-700"
                                     title="Copier le lien"
                                   >
+                                    {copiedPresskitId === artist.id ? (
+                                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    ) : (
+                                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                                        <path d="M10.5 5.5V3.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5h2" stroke="currentColor" strokeWidth="1.5"/>
+                                      </svg>
+                                    )}
                                     {copiedPresskitId === artist.id ? "Copie !" : "Copier"}
                                   </button>
                                   <button
@@ -428,9 +442,12 @@ export default function AgencyPage() {
                                       setPresskitUrl(artist.presskitUrl ?? "");
                                       setEditingPresskitId(artist.id);
                                     }}
-                                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                                    className="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-md hover:bg-gray-800"
+                                    title="Modifier le lien"
                                   >
-                                    Modifier
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
                                   </button>
                                 </>
                               ) : (
@@ -439,9 +456,12 @@ export default function AgencyPage() {
                                     setPresskitUrl("");
                                     setEditingPresskitId(artist.id);
                                   }}
-                                  className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+                                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-purple-400 transition-colors"
                                 >
-                                  + Ajouter un presskit
+                                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V10m-4-8h5m0 0v5m0-5L7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                  Ajouter un presskit
                                 </button>
                               )}
                             </div>
