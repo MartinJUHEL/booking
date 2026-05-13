@@ -104,7 +104,7 @@ export default function HeaderBar() {
 
   return (
     <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
         {/* Left: Nav tabs */}
         <nav className="flex items-center gap-1 h-full">
           {navItems.map((item) => {
@@ -140,14 +140,14 @@ export default function HeaderBar() {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-50">
-              <div className="px-3 py-2 border-b border-gray-800">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-2 z-50">
+              <div className="px-4 py-3 border-b border-gray-800">
                 <p className="text-sm font-medium text-gray-200 truncate">{user.name || user.email}</p>
                 {user.name && (
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{user.email}</p>
                 )}
                 {isBooker && user.agencyName && (
-                  <p className="text-xs text-purple-400 mt-0.5">{user.agencyName}</p>
+                  <p className="text-xs text-purple-400 mt-1">{user.agencyName}</p>
                 )}
               </div>
               <button
@@ -155,7 +155,7 @@ export default function HeaderBar() {
                   setDropdownOpen(false);
                   logout();
                 }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-red-400 hover:bg-gray-800/50 transition-colors"
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-400 hover:text-red-400 hover:bg-gray-800/50 transition-colors"
               >
                 <LogoutIcon />
                 Se deconnecter
