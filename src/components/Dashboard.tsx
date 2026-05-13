@@ -92,7 +92,7 @@ export default function Dashboard({
                 : "bg-gray-800 text-gray-400 hover:text-white"
             }`}
           >
-            Table
+            Liste
           </button>
           <button
             onClick={() => setView("calendar")}

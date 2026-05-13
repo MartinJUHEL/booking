@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "@/lib/api-client";
 import BookingDetail from "./BookingDetail";
 import BookingForm from "./BookingForm";
@@ -11,6 +11,8 @@ import PromoterDetail from "./PromoterDetail";
 import type { Booking, DashboardBookingItem, DashboardResponse, Promoter } from "./types";
 
 type ViewMode = "table" | "calendar" | "promoters";
+type SortField = "date" | "artist" | "venue" | "city" | "fee" | "status";
+type SortDir = "asc" | "desc";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -36,30 +38,104 @@ interface PromoterWithCount extends Promoter {
   bookingsCount?: number;
 }
 
-function Check({ checked, onClick }: { checked: boolean; onClick?: () => void }) {
+// --- Icon components ---
+
+function CheckCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.5 8L7.2 9.7L10.5 6.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function EmptyCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.5 8H10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.5 4H11.5M5 4V3C5 2.448 5.448 2 6 2H8C8.552 2 9 2.448 9 3V4M9.5 4V11.5C9.5 12.052 9.052 12.5 8.5 12.5H5.5C4.948 12.5 4.5 12.052 4.5 11.5V4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.5 10.5L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SortIcon({ active, direction }: { active: boolean; direction: SortDir }) {
+  return (
+    <svg className={`inline-block ml-1 ${active ? "text-purple-400" : "text-gray-600"}`} width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {direction === "asc" ? (
+        <path d="M2 6.5L5 3.5L8 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
+
+function CalendarEmptyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="10" width="36" height="32" rx="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M16 6V14M32 6V14M6 20H42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20 30L28 30M24 26V34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// --- Check component with icon ---
+function Check({ checked, onClick, tooltip }: { checked: boolean; onClick?: () => void; tooltip?: string }) {
   if (onClick) {
     return (
       <button
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className={`inline-block w-5 h-5 rounded text-center text-xs leading-5 transition-colors ${
+        className={`inline-flex items-center justify-center w-6 h-6 rounded-md transition-all ${
           checked
-            ? "bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400"
-            : "bg-gray-800 text-gray-600 hover:bg-green-500/10 hover:text-green-500"
+            ? "text-green-400 hover:text-red-400"
+            : "text-gray-600 hover:text-green-400"
         }`}
-        title={checked ? "Marquer comme non payé" : "Marquer comme payé"}
+        title={tooltip || (checked ? "Marquer comme non fait" : "Marquer comme fait")}
       >
-        {checked ? "✓" : "–"}
+        {checked ? <CheckCircleIcon /> : <EmptyCircleIcon />}
       </button>
     );
   }
   return (
     <span
-      className={`inline-block w-5 h-5 rounded text-center text-xs leading-5 ${
-        checked ? "bg-green-500/20 text-green-400" : "bg-gray-800 text-gray-600"
+      className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${
+        checked ? "text-green-400" : "text-gray-600"
       }`}
+      title={tooltip}
     >
-      {checked ? "✓" : "–"}
+      {checked ? <CheckCircleIcon /> : <EmptyCircleIcon />}
     </span>
+  );
+}
+
+// --- Stats Card ---
+function StatCard({ label, value, alert, icon }: { label: string; value: string | number; alert?: boolean; icon?: React.ReactNode }) {
+  return (
+    <div className={`rounded-xl border p-4 ${alert ? "border-red-500/30 bg-red-500/5" : "border-gray-800 bg-gray-900/50"}`}>
+      <div className="flex items-center gap-2 mb-1">
+        {icon && <span className={alert ? "text-red-400" : "text-gray-500"}>{icon}</span>}
+        <span className="text-sm text-gray-400">{label}</span>
+      </div>
+      <div className={`text-2xl font-bold ${alert ? "text-red-400" : "text-white"}`}>{value}</div>
+    </div>
   );
 }
 
@@ -70,8 +146,13 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   const [availableYears, setAvailableYears] = useState<number[]>([year]);
   const [artistFilter, setArtistFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("table");
+
+  // Sorting
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   // Booking form state
   const [showForm, setShowForm] = useState(false);
@@ -128,6 +209,70 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     }
   }, [view, fetchPromoters]);
 
+  // --- Filtered + sorted bookings ---
+  const filteredBookings = useMemo(() => {
+    let result = bookings;
+
+    // Text search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((b) =>
+        [b.venue, b.city, b.country, b.promoter, b.artistName]
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case "date":
+          cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case "artist":
+          cmp = (a.artistName || "").localeCompare(b.artistName || "");
+          break;
+        case "venue":
+          cmp = a.venue.localeCompare(b.venue);
+          break;
+        case "city":
+          cmp = a.city.localeCompare(b.city);
+          break;
+        case "fee":
+          cmp = a.fee - b.fee;
+          break;
+        case "status":
+          cmp = a.status.localeCompare(b.status);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [bookings, search, sortField, sortDir]);
+
+  // --- Stats ---
+  const stats = useMemo(() => {
+    const upcoming = bookings.filter(
+      (b) => new Date(b.date) >= new Date() && b.status !== "cancelled"
+    );
+    const totalFees = upcoming.reduce((sum, b) => sum + b.fee, 0);
+    const unpaidAgency = upcoming.filter((b) => !b.agencyFeesPaid).length;
+    const unpaidArtist = upcoming.filter((b) => !b.artistFeesPaid).length;
+    return { upcoming: upcoming.length, totalFees, unpaidAgency, unpaidArtist };
+  }, [bookings]);
+
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
+
   async function handleToggleField(id: string, field: "agencyFeesPaid" | "artistFeesPaid", value: boolean) {
     try {
       await api.put(`/api/bookings/${id}`, { [field]: value });
@@ -151,7 +296,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   }
 
   async function handleEdit(booking: Booking) {
-    // Load promoters for the booking form
     try {
       const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
       setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
@@ -171,12 +315,10 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       setSelectedBookingId(null);
       setTimeout(() => setSelectedBookingId(updated.id), 0);
     } else {
-      // Create new booking for the selected artist
       const artistId = createForArtistId;
       if (!artistId) return;
       const payload = { ...data, artistId };
       const created = await api.post<Booking>("/api/bookings", payload);
-      // Refresh bookings list
       fetchBookings();
       setSelectedBookingId(created.id);
     }
@@ -212,24 +354,100 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     setShowPromoterForm(true);
   }
 
-  // Resolve artistId for the booking being edited (from the dashboard item)
   function getArtistIdForBooking(bookingId: string): string | undefined {
     const item = bookings.find(b => b.id === bookingId);
     return item?.artistId;
   }
 
+  // --- Sortable column header ---
+  function SortableHeader({ field, label, align }: { field: SortField; label: string; align?: string }) {
+    return (
+      <th
+        className={`px-4 py-3 font-medium cursor-pointer hover:text-gray-200 transition-colors select-none ${align || "text-left"}`}
+        onClick={() => handleSort(field)}
+      >
+        {label}
+        <SortIcon active={sortField === field} direction={sortField === field ? sortDir : "asc"} />
+      </th>
+    );
+  }
+
   return (
     <div>
-      {/* Filters + View Toggle */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      {/* Stats Cards */}
+      {view !== "promoters" && !loading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard label="Dates à venir" value={stats.upcoming} />
+          <StatCard label="CA total" value={`${stats.totalFees.toLocaleString("fr-FR")} €`} />
+          <StatCard label="Fees agence impayés" value={stats.unpaidAgency} alert={stats.unpaidAgency > 0} />
+          <StatCard label="Fees artiste impayés" value={stats.unpaidArtist} alert={stats.unpaidArtist > 0} />
+        </div>
+      )}
+
+      {/* Row 1: Title + Action button */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold">
+            {view === "promoters" ? "Promoteurs" : "Dates"}
+          </h2>
+          {view !== "promoters" && !loading && (
+            <span className="text-sm text-gray-500">
+              {filteredBookings.length} date{filteredBookings.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+
         {view === "promoters" ? (
-          <div />
+          <button
+            onClick={() => {
+              setEditingPromoter(null);
+              setShowPromoterForm(true);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+          >
+            + Nouveau promoteur
+          </button>
         ) : (
-          <>
+          <button
+            onClick={async () => {
+              setEditingBooking(null);
+              setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
+              setShowForm(true);
+              try {
+                const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
+                setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+              } catch (err) {
+                console.error("Failed to load promoters:", err);
+              }
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+          >
+            + Nouvelle date
+          </button>
+        )}
+      </div>
+
+      {/* Row 2: Filters | View toggle | Year nav */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+        {/* Left: filters */}
+        {view !== "promoters" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-gray-900 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm w-48 focus:outline-none focus:border-purple-500 placeholder-gray-600"
+              />
+            </div>
+
             <select
               value={artistFilter}
               onChange={(e) => setArtistFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
             >
               <option value="">Tous les artistes</option>
               {artists.map((a) => (
@@ -242,112 +460,70 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
             >
               <option value="">Tous les statuts</option>
               <option value="pending">En attente</option>
               <option value="confirmed">Confirmé</option>
               <option value="cancelled">Annulé</option>
             </select>
-          </>
+          </div>
+        ) : (
+          <div />
         )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => setView("table")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "table"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            Table
-          </button>
-          <button
-            onClick={() => setView("calendar")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "calendar"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            Calendrier
-          </button>
-          <button
-            onClick={() => setView("promoters")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "promoters"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            Promoteurs
-          </button>
-        </div>
 
         <div className="flex-1" />
 
-        {view === "promoters" ? (
-          <button
-            onClick={() => {
-              setEditingPromoter(null);
-              setShowPromoterForm(true);
-            }}
-            disabled={false}
-            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
-          >
-            + Nouveau promoteur
-          </button>
-        ) : (
-          <>
-            {/* Year navigation */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setYear((y) => y - 1)}
-                disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
-                className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                &larr;
-              </button>
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-purple-500"
-              >
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setYear((y) => y + 1)}
-                disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
-                className="px-2 py-1 rounded-lg text-sm bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                &rarr;
-              </button>
-            </div>
-
-            <div className="text-sm text-gray-400 self-center">
-              {bookings.length} date{bookings.length !== 1 ? "s" : ""}
-            </div>
-
+        {/* Center: view toggle */}
+        <div className="inline-flex rounded-lg border border-gray-700 overflow-hidden">
+          {(
+            [
+              { key: "table", label: "Liste" },
+              { key: "calendar", label: "Calendrier" },
+              { key: "promoters", label: "Promoteurs" },
+            ] as { key: ViewMode; label: string }[]
+          ).map((item) => (
             <button
-              onClick={async () => {
-                setEditingBooking(null);
-                setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
-                setShowForm(true);
-                try {
-                  const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
-                  setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
-                } catch (err) {
-                  console.error("Failed to load promoters:", err);
-                }
-              }}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
+              key={item.key}
+              onClick={() => setView(item.key)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                view === item.key
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800"
+              }`}
             >
-              + Nouvelle date
+              {item.label}
             </button>
-          </>
+          ))}
+        </div>
+
+        {/* Right: year nav */}
+        {view !== "promoters" && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setYear((y) => y - 1)}
+              disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
+              className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              &larr;
+            </button>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-purple-500"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setYear((y) => y + 1)}
+              disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
+              className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              &rarr;
+            </button>
+          </div>
         )}
       </div>
 
@@ -367,44 +543,77 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
         <div className="text-center py-16 text-gray-500">Chargement...</div>
       ) : view === "calendar" ? (
         <CalendarView
-          bookings={bookings}
+          bookings={filteredBookings}
           onSelect={(b) => setSelectedBookingId(b.id)}
           renderLabel={(b) => `${b.artistName} - ${b.venue}`}
         />
-      ) : bookings.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <p className="text-lg">Aucune date en {year}</p>
+      ) : filteredBookings.length === 0 ? (
+        <div className="text-center py-20">
+          <CalendarEmptyIcon className="mx-auto text-gray-700 mb-4" />
+          {search || artistFilter || statusFilter ? (
+            <>
+              <p className="text-lg text-gray-400 font-medium mb-2">Aucun résultat</p>
+              <p className="text-sm text-gray-600 mb-4">Essayez de modifier vos filtres de recherche</p>
+              <button
+                onClick={() => { setSearch(""); setArtistFilter(""); setStatusFilter(""); }}
+                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Réinitialiser les filtres
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-lg text-gray-400 font-medium mb-2">Aucune date en {year}</p>
+              <p className="text-sm text-gray-600 mb-4">Créez votre première date pour commencer</p>
+              <button
+                onClick={async () => {
+                  setEditingBooking(null);
+                  setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
+                  setShowForm(true);
+                  try {
+                    const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
+                    setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+                  } catch (err) {
+                    console.error("Failed to load promoters:", err);
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+              >
+                + Nouvelle date
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-800">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-900/80 text-gray-400 text-left">
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Artiste</th>
-                <th className="px-4 py-3 font-medium">Venue</th>
-                <th className="px-4 py-3 font-medium">Ville</th>
-                <th className="px-4 py-3 font-medium">Promoter</th>
-                <th className="px-4 py-3 font-medium text-right">Cachet</th>
-                <th className="px-4 py-3 font-medium text-center">Statut</th>
-                <th className="px-4 py-3 font-medium text-center">Contrat</th>
-                <th className="px-4 py-3 font-medium text-center">Fees Ag.</th>
-                <th className="px-4 py-3 font-medium text-center">Fees Art.</th>
-                <th className="px-4 py-3 font-medium text-center">Transport</th>
-                <th className="px-4 py-3 font-medium text-center">Hotel</th>
-                <th className="px-4 py-3 font-medium"></th>
+                <SortableHeader field="date" label="Date" />
+                <SortableHeader field="artist" label="Artiste" />
+                <SortableHeader field="venue" label="Venue" />
+                <SortableHeader field="city" label="Ville" />
+                <th className="px-4 py-3 font-medium">Promoteur</th>
+                <SortableHeader field="fee" label="Cachet" align="text-right" />
+                <SortableHeader field="status" label="Statut" align="text-center" />
+                <th className="px-4 py-3 font-medium text-center" title="Contrat signé">Contrat</th>
+                <th className="px-4 py-3 font-medium text-center" title="Fees agence payés">Fees Ag.</th>
+                <th className="px-4 py-3 font-medium text-center" title="Fees artiste payés">Fees Art.</th>
+                <th className="px-4 py-3 font-medium text-center" title="Transport réservé">Transport</th>
+                <th className="px-4 py-3 font-medium text-center" title="Hôtel réservé">Hôtel</th>
+                <th className="px-4 py-3 font-medium w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
-              {bookings.map((b) => {
+              {filteredBookings.map((b, index) => {
                 const isPast = new Date(b.date) < new Date();
                 return (
                   <tr
                     key={b.id}
                     onClick={() => setSelectedBookingId(b.id)}
-                    className={`hover:bg-gray-900/50 transition-colors cursor-pointer ${
+                    className={`transition-colors cursor-pointer ${
                       isPast ? "opacity-50" : ""
-                    }`}
+                    } ${index % 2 === 0 ? "bg-gray-950" : "bg-gray-900/30"} hover:bg-gray-800/50`}
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="font-medium">
@@ -442,26 +651,27 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.contractSigned} />
+                      <Check checked={b.contractSigned} tooltip="Contrat signé" />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.agencyFeesPaid} onClick={() => handleToggleField(b.id, "agencyFeesPaid", !b.agencyFeesPaid)} />
+                      <Check checked={b.agencyFeesPaid} onClick={() => handleToggleField(b.id, "agencyFeesPaid", !b.agencyFeesPaid)} tooltip="Fees agence" />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.artistFeesPaid} onClick={() => handleToggleField(b.id, "artistFeesPaid", !b.artistFeesPaid)} />
+                      <Check checked={b.artistFeesPaid} onClick={() => handleToggleField(b.id, "artistFeesPaid", !b.artistFeesPaid)} tooltip="Fees artiste" />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.transportBooked} />
+                      <Check checked={b.transportBooked} tooltip="Transport réservé" />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.hotelBooked} />
+                      <Check checked={b.hotelBooked} tooltip="Hôtel réservé" />
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <td className="px-4 py-3 text-center">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteBooking(b.id); }}
-                        className="text-gray-500 hover:text-red-400 transition-colors text-xs"
+                        className="text-gray-600 hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
+                        title="Supprimer cette date"
                       >
-                        Suppr.
+                        <TrashIcon />
                       </button>
                     </td>
                   </tr>
@@ -488,7 +698,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       {/* Booking Form Modal */}
       {showForm && (
         <>
-          {/* Artist selector for new bookings */}
           {!editingBooking && !createForArtistId && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div className="absolute inset-0 bg-black/60" onClick={() => { setShowForm(false); setCreateForArtistId(""); }} />
@@ -515,7 +724,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
               </div>
             </div>
           )}
-          {/* Actual booking form (edit or create with artist selected) */}
           {(editingBooking || createForArtistId) && (
             <BookingForm
               booking={editingBooking}
