@@ -258,10 +258,9 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     const upcoming = bookings.filter(
       (b) => new Date(b.date) >= new Date() && b.status !== "cancelled"
     );
-    const totalFees = upcoming.reduce((sum, b) => sum + b.fee, 0);
     const unpaidAgency = upcoming.filter((b) => !b.agencyFeesPaid).length;
     const unpaidArtist = upcoming.filter((b) => !b.artistFeesPaid).length;
-    return { upcoming: upcoming.length, totalFees, unpaidAgency, unpaidArtist };
+    return { upcoming: upcoming.length, unpaidAgency, unpaidArtist };
   }, [bookings]);
 
   function handleSort(field: SortField) {
@@ -376,9 +375,9 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     <div>
       {/* Stats Cards */}
       {view !== "promoters" && !loading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <StatCard label="Dates à venir" value={stats.upcoming} />
-          <StatCard label="CA total" value={`${stats.totalFees.toLocaleString("fr-FR")} €`} />
+
           <StatCard label="Fees agence impayés" value={stats.unpaidAgency} alert={stats.unpaidAgency > 0} />
           <StatCard label="Fees artiste impayés" value={stats.unpaidArtist} alert={stats.unpaidArtist > 0} />
         </div>
