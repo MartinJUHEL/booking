@@ -244,7 +244,7 @@ export default function AgencyPage() {
     <div className="min-h-screen">
       <HeaderBar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Agency name */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{agency?.name}</h1>
@@ -256,7 +256,7 @@ export default function AgencyPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+              className={`px-6 py-3 text-base font-medium transition-colors relative ${
                 activeTab === tab.key
                   ? "text-white"
                   : "text-gray-500 hover:text-gray-300"
