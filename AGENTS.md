@@ -45,9 +45,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
 | `src/app/agency/page.tsx` | Agency management (booker-only): invite members, list members (owner can remove), pending invitations, artists list (invite by email, remove) |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |
+| `src/app/promoters/page.tsx` | Promoters management page (booker-only): list, search, create, edit, delete promoters |
 | `src/app/settings/` | Google Calendar settings |
-| `src/components/Dashboard.tsx` | Artist dashboard (read-only): Table / Calendar / Promoters tabs, no create/edit/delete |
-| `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status filters, table/calendar toggle |
+| `src/components/HeaderBar.tsx` | Shared top navigation bar — icon nav tabs (Booking, Agence, Promoteurs for bookers / Configuration for artists), user dropdown with logout. Uses `useAuth()` and `usePathname()`. Active tab highlighted with purple underline. |
+| `src/components/Dashboard.tsx` | Artist dashboard (read-only): Liste / Calendar tabs, stats cards, search + status filter, no create/edit/delete |
+| `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status/text filters, sortable table, Liste/Calendar toggle, stats cards |
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
@@ -141,8 +143,8 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 ## Roles
 
 ### Artist
-- **Read-only access** to their own bookings — no create, edit, or delete, no promoters tab
-- Dashboard with Table / Calendar tabs only (no action buttons, no edit/delete)
+- **Read-only access** to their own bookings — no create, edit, or delete
+- Dashboard with **Liste / Calendar** tabs (no action buttons, no edit/delete)
 - Booking detail panel is read-only (no "Modifier" button)
 - **Pending booker invitations** shown as a banner above the dashboard with Accept/Reject buttons
 - **My bookers** section: shows linked bookers as chips with a remove button (`DELETE /api/artists/bookers/{bookerId}`)
@@ -151,15 +153,16 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **Belongs to an Agency** — created during onboarding. Other bookers join via ephemeral invitation links (5-min expiry, sent by email from `/agency` page)
 - **Agency management page** (`/agency`): invite bookers by email, view members (owner sees "Admin" badge and remove buttons), view pending invitations, manage artists (invite by email, list with remove buttons)
 - **Join flow** (`/agency/join/[token]`): booker clicks invitation link from email, authenticates if needed (stores redirect in `localStorage`), sees agency info, clicks "Rejoindre". Email must match invitation. Link expires after 5 minutes (HTTP 410).
-- **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering)
-- **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a single table/calendar, loaded by year (default: current year)
+- **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering). Managed from the dedicated `/promoters` page.
+- **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a sortable table/calendar, loaded by year (default: current year). Includes stats cards (upcoming dates, unpaid agency fees, unpaid artist fees).
 - **"+ Nouvelle date" button**: creates a booking for a selected artist. If only one artist, opens the form directly; if multiple, shows an artist selector modal first.
-- **Filters**: by artist (dropdown) and by status; year navigation with arrows and dropdown
+- **Filters**: text search + artist dropdown + status dropdown; year navigation with arrows and dropdown; sortable columns (date, artist, venue, city, fee, status)
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
 - **Artists are managed from the Agency page** (`/agency`) — invite by email, list with remove buttons. Dashboard only shows bookings.
 - Can send advancing form links to promoters and validate sent fields one by one
-- **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`. "Agence" link shown instead.
+- **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`.
+- **Top bar navigation** (booker): Booking | Agence | Promoteurs — each with icon, active tab underlined in purple
 - `/onboarding` page: step 1 = role selection, step 2 = agency creation (bookers without an agency are redirected back here; joining is only via invitation link)
 
 ## Booking List/Detail Pattern
