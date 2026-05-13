@@ -43,7 +43,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
-| `src/app/agency/page.tsx` | Agency management (booker-only): invite members, list members (owner can remove), pending invitations, artists list (invite by email, remove) |
+| `src/app/agency/page.tsx` | Agency management (booker-only): 3 tabs — Artistes (invite + list), Bookers (invite + pending invitations + members list), Infos (agency info + billing: Nom, SIRET, N°TVA, Adresse, Pays with edit form for owner and copy-all button) |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |
 | `src/app/promoters/page.tsx` | Promoters management page (booker-only): list, search, create, edit, delete promoters |
 | `src/app/settings/` | Google Calendar settings |
@@ -151,7 +151,7 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 
 ### Booker
 - **Belongs to an Agency** — created during onboarding. Other bookers join via ephemeral invitation links (5-min expiry, sent by email from `/agency` page)
-- **Agency management page** (`/agency`): invite bookers by email, view members (owner sees "Admin" badge and remove buttons), view pending invitations, manage artists (invite by email, list with remove buttons)
+- **Agency management page** (`/agency`): 3 tabs — **Artistes** (invite by email + list with remove), **Bookers** (invite by email + pending invitations + members list with remove for owner), **Infos** (agency info + billing fields: Nom, SIRET, N°TVA, Adresse, Pays — editable by owner via inline form, copy-all button)
 - **Join flow** (`/agency/join/[token]`): booker clicks invitation link from email, authenticates if needed (stores redirect in `localStorage`), sees agency info, clicks "Rejoindre". Email must match invitation. Link expires after 5 minutes (HTTP 410).
 - **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering). Managed from the dedicated `/promoters` page.
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a sortable table/calendar, loaded by year (default: current year). Includes stats cards (upcoming dates, unpaid agency fees, unpaid artist fees).
