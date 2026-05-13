@@ -42,6 +42,7 @@ interface Artist {
   email: string;
   image: string | null;
   artistName: string | null;
+  presskitUrl: string | null;
 }
 
 type Tab = "artistes" | "bookers" | "infos";
@@ -78,6 +79,12 @@ export default function AgencyPage() {
   const [savingBilling, setSavingBilling] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // Presskit edit
+  const [editingPresskitId, setEditingPresskitId] = useState<string | null>(null);
+  const [presskitUrl, setPresskitUrl] = useState("");
+  const [savingPresskit, setSavingPresskit] = useState(false);
+  const [copiedPresskitId, setCopiedPresskitId] = useState<string | null>(null);
 
   const isOwner = agency?.ownerId === user?.id;
 
@@ -226,6 +233,31 @@ export default function AgencyPage() {
     });
   }
 
+  async function handleSavePresskit(artistId: string) {
+    setSavingPresskit(true);
+    try {
+      await api.put(`/api/artists/${artistId}/presskit`, {
+        presskitUrl: presskitUrl.trim() || null,
+      });
+      setArtists((prev) =>
+        prev.map((a) => (a.id === artistId ? { ...a, presskitUrl: presskitUrl.trim() || null } : a))
+      );
+      setEditingPresskitId(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur";
+      alert(message);
+    } finally {
+      setSavingPresskit(false);
+    }
+  }
+
+  function handleCopyPresskit(artistId: string, url: string) {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedPresskitId(artistId);
+      setTimeout(() => setCopiedPresskitId(null), 2000);
+    });
+  }
+
   if (loading || !user || user.role !== "booker" || !user.agencyId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -318,32 +350,103 @@ export default function AgencyPage() {
                     {artists.map((artist) => (
                       <div
                         key={artist.id}
-                        className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
+                        className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3"
                       >
-                        {artist.image ? (
-                          <img
-                            src={artist.image}
-                            alt=""
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400">
-                            {(artist.artistName || artist.name || artist.email)[0].toUpperCase()}
+                        <div className="flex items-center gap-3">
+                          {artist.image ? (
+                            <img
+                              src={artist.image}
+                              alt=""
+                              className="w-8 h-8 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400">
+                              {(artist.artistName || artist.name || artist.email)[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">
+                              {artist.artistName || artist.name || artist.email}
+                            </div>
+                            <div className="text-xs text-gray-500">{artist.email}</div>
                           </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">
-                            {artist.artistName || artist.name || artist.email}
-                          </div>
-                          <div className="text-xs text-gray-500">{artist.email}</div>
+                          <button
+                            onClick={() => handleRemoveArtist(artist.id, artist.artistName || artist.name || artist.email)}
+                            className="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                            title="Retirer l'artiste"
+                          >
+                            &times;
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleRemoveArtist(artist.id, artist.artistName || artist.name || artist.email)}
-                          className="text-gray-500 hover:text-red-400 transition-colors text-sm"
-                          title="Retirer l'artiste"
-                        >
-                          &times;
-                        </button>
+
+                        {/* Presskit */}
+                        <div className="mt-2 pl-11">
+                          {editingPresskitId === artist.id ? (
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="url"
+                                value={presskitUrl}
+                                onChange={(e) => setPresskitUrl(e.target.value)}
+                                placeholder="https://drive.google.com/..."
+                                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-500"
+                              />
+                              <button
+                                onClick={() => handleSavePresskit(artist.id)}
+                                disabled={savingPresskit}
+                                className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
+                              >
+                                {savingPresskit ? "..." : "OK"}
+                              </button>
+                              <button
+                                onClick={() => setEditingPresskitId(null)}
+                                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {artist.presskitUrl ? (
+                                <>
+                                  <a
+                                    href={artist.presskitUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-purple-400 hover:text-purple-300 truncate max-w-xs transition-colors"
+                                  >
+                                    Presskit
+                                  </a>
+                                  <button
+                                    onClick={() => handleCopyPresskit(artist.id, artist.presskitUrl!)}
+                                    className="text-xs text-gray-500 hover:text-white transition-colors"
+                                    title="Copier le lien"
+                                  >
+                                    {copiedPresskitId === artist.id ? "Copie !" : "Copier"}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setPresskitUrl(artist.presskitUrl ?? "");
+                                      setEditingPresskitId(artist.id);
+                                    }}
+                                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                                  >
+                                    Modifier
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setPresskitUrl("");
+                                    setEditingPresskitId(artist.id);
+                                  }}
+                                  className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+                                >
+                                  + Ajouter un presskit
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
