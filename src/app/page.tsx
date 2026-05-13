@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
 import Dashboard from "@/components/Dashboard";
 import BookerDashboard from "@/components/BookerDashboard";
+import HeaderBar from "@/components/HeaderBar";
 import type { BookingListItem } from "@/components/types";
 
 interface Artist {
@@ -118,7 +119,7 @@ function HomeContent() {
   if (dataLoading) {
     return (
       <div className="min-h-screen">
-        <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
+        <HeaderBar />
         <div className="flex items-center justify-center py-20">
           <div className="text-gray-400">Chargement des donnees...</div>
         </div>
@@ -130,7 +131,7 @@ function HomeContent() {
   if (isBooker && artists.length === 0) {
     return (
       <div className="min-h-screen">
-        <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
+        <HeaderBar />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="text-center py-20">
             <h2 className="text-xl font-bold mb-2">Aucun artiste</h2>
@@ -151,7 +152,7 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen">
-      <HeaderBar user={user} isBooker={isBooker} onLogout={logout} />
+      <HeaderBar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {isBooker ? (
@@ -223,49 +224,5 @@ function HomeContent() {
         )}
       </main>
     </div>
-  );
-}
-
-function HeaderBar({
-  user,
-  isBooker,
-  onLogout,
-}: {
-  user: { name: string | null; email: string; role: string | null };
-  isBooker: boolean;
-  onLogout: () => void;
-}) {
-  return (
-    <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold">Gigflow</h1>
-          {isBooker && (
-            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-medium">
-              Booker
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          {!isBooker && (
-            <Link href="/settings" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
-              Configuration
-            </Link>
-          )}
-          {isBooker && (
-            <Link href="/agency" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
-              Agence
-            </Link>
-          )}
-          <span className="text-sm text-gray-400">{user.name || user.email}</span>
-          <button
-            onClick={onLogout}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Deconnexion
-          </button>
-        </div>
-      </div>
-    </header>
   );
 }

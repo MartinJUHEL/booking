@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api-client";
+import HeaderBar from "@/components/HeaderBar";
 
 interface Agency {
   id: string;
@@ -173,24 +174,7 @@ export default function AgencyPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-xl font-bold hover:text-purple-400 transition-colors">
-              Gigflow
-            </Link>
-            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-medium">
-              Booker
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
-              Dashboard
-            </Link>
-            <span className="text-sm text-purple-400 font-medium">Agence</span>
-          </div>
-        </div>
-      </header>
+      <HeaderBar />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {dataLoading ? (

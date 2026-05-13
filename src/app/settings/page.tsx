@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import HeaderBar from "@/components/HeaderBar";
 import SettingsClient from "./SettingsClient";
 
 export default function SettingsPage() {
@@ -34,24 +34,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Gigflow</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              Retour au dashboard
-            </Link>
-            <span className="text-sm text-gray-400">
-              {user.name || user.email}
-            </span>
-          </div>
-        </div>
-      </header>
+      <HeaderBar />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <h2 className="text-2xl font-bold mb-8">Configuration</h2>
