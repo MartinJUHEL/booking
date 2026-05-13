@@ -12,6 +12,11 @@ interface Agency {
   ownerId: string;
   memberCount: number;
   createdAt: string;
+  billingName: string | null;
+  billingSiret: string | null;
+  billingVatNumber: string | null;
+  billingAddress: string | null;
+  billingCountry: string | null;
 }
 
 interface Member {
@@ -62,6 +67,17 @@ export default function AgencyPage() {
   const [invitingArtist, setInvitingArtist] = useState(false);
   const [artistMessage, setArtistMessage] = useState<string | null>(null);
   const [artistError, setArtistError] = useState<string | null>(null);
+
+  // Billing edit form
+  const [editingBilling, setEditingBilling] = useState(false);
+  const [billingName, setBillingName] = useState("");
+  const [billingSiret, setBillingSiret] = useState("");
+  const [billingVatNumber, setBillingVatNumber] = useState("");
+  const [billingAddress, setBillingAddress] = useState("");
+  const [billingCountry, setBillingCountry] = useState("");
+  const [savingBilling, setSavingBilling] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const isOwner = agency?.ownerId === user?.id;
 
@@ -162,6 +178,52 @@ export default function AgencyPage() {
       const message = err instanceof Error ? err.message : "Erreur";
       alert(message);
     }
+  }
+
+  function openBillingEdit() {
+    setBillingName(agency?.billingName ?? "");
+    setBillingSiret(agency?.billingSiret ?? "");
+    setBillingVatNumber(agency?.billingVatNumber ?? "");
+    setBillingAddress(agency?.billingAddress ?? "");
+    setBillingCountry(agency?.billingCountry ?? "");
+    setBillingError(null);
+    setEditingBilling(true);
+  }
+
+  async function handleSaveBilling(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingBilling(true);
+    setBillingError(null);
+    try {
+      const updated = await api.put<Agency>("/api/agency", {
+        billingName: billingName.trim() || null,
+        billingSiret: billingSiret.trim() || null,
+        billingVatNumber: billingVatNumber.trim() || null,
+        billingAddress: billingAddress.trim() || null,
+        billingCountry: billingCountry.trim() || null,
+      });
+      setAgency(updated);
+      setEditingBilling(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur lors de la sauvegarde";
+      setBillingError(message);
+    } finally {
+      setSavingBilling(false);
+    }
+  }
+
+  function handleCopyBilling() {
+    const lines = [
+      agency?.billingName,
+      agency?.billingSiret ? `SIRET : ${agency.billingSiret}` : null,
+      agency?.billingVatNumber ? `N°TVA : ${agency.billingVatNumber}` : null,
+      agency?.billingAddress,
+      agency?.billingCountry,
+    ].filter(Boolean);
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
   }
 
   if (loading || !user || user.role !== "booker" || !user.agencyId) {
@@ -436,12 +498,140 @@ export default function AgencyPage() {
                   </div>
                 </div>
 
-                {/* Billing info placeholder */}
+                {/* Billing info */}
                 <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl">
-                  <h2 className="text-lg font-semibold mb-4">Facturation</h2>
-                  <p className="text-gray-500 text-sm">
-                    Les informations de facturation seront disponibles prochainement.
-                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Facturation</h2>
+                    {!editingBilling && isOwner && (
+                      <button
+                        onClick={openBillingEdit}
+                        className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg"
+                      >
+                        Modifier
+                      </button>
+                    )}
+                  </div>
+
+                  {editingBilling ? (
+                    <form onSubmit={handleSaveBilling} className="space-y-4">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nom</label>
+                        <input
+                          type="text"
+                          value={billingName}
+                          onChange={(e) => setBillingName(e.target.value)}
+                          placeholder="Nom ou raison sociale"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">SIRET</label>
+                        <input
+                          type="text"
+                          value={billingSiret}
+                          onChange={(e) => setBillingSiret(e.target.value)}
+                          placeholder="123 456 789 00012"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">N°TVA</label>
+                        <input
+                          type="text"
+                          value={billingVatNumber}
+                          onChange={(e) => setBillingVatNumber(e.target.value)}
+                          placeholder="FR 12 345678901"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Adresse</label>
+                        <input
+                          type="text"
+                          value={billingAddress}
+                          onChange={(e) => setBillingAddress(e.target.value)}
+                          placeholder="12 rue de la Paix, 75001 Paris"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Pays</label>
+                        <input
+                          type="text"
+                          value={billingCountry}
+                          onChange={(e) => setBillingCountry(e.target.value)}
+                          placeholder="France"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      {billingError && (
+                        <p className="text-red-400 text-sm">{billingError}</p>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={savingBilling}
+                          className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+                        >
+                          {savingBilling ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingBilling(false)}
+                          className="text-gray-400 hover:text-white px-5 py-2 rounded-lg text-sm transition-colors border border-gray-700"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div>
+                      {!agency?.billingName && !agency?.billingSiret && !agency?.billingVatNumber && !agency?.billingAddress && !agency?.billingCountry ? (
+                        <p className="text-gray-500 text-sm">Aucune information de facturation renseignee.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {agency?.billingName && (
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wide">Nom</label>
+                              <p className="text-sm mt-1">{agency.billingName}</p>
+                            </div>
+                          )}
+                          {agency?.billingSiret && (
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wide">SIRET</label>
+                              <p className="text-sm mt-1">{agency.billingSiret}</p>
+                            </div>
+                          )}
+                          {agency?.billingVatNumber && (
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wide">N°TVA</label>
+                              <p className="text-sm mt-1">{agency.billingVatNumber}</p>
+                            </div>
+                          )}
+                          {agency?.billingAddress && (
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wide">Adresse</label>
+                              <p className="text-sm mt-1">{agency.billingAddress}</p>
+                            </div>
+                          )}
+                          {agency?.billingCountry && (
+                            <div>
+                              <label className="text-xs text-gray-500 uppercase tracking-wide">Pays</label>
+                              <p className="text-sm mt-1">{agency.billingCountry}</p>
+                            </div>
+                          )}
+                          <div className="pt-2">
+                            <button
+                              onClick={handleCopyBilling}
+                              className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg"
+                            >
+                              {copySuccess ? "Copie !" : "Copier tout"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
