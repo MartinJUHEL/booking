@@ -5,12 +5,9 @@ import { api } from "@/lib/api-client";
 import BookingDetail from "./BookingDetail";
 import BookingForm from "./BookingForm";
 import CalendarView from "./CalendarView";
-import PromoterList from "./PromoterList";
-import PromoterForm from "./PromoterForm";
-import PromoterDetail from "./PromoterDetail";
 import type { Booking, DashboardBookingItem, DashboardResponse, Promoter } from "./types";
 
-type ViewMode = "table" | "calendar" | "promoters";
+type ViewMode = "table" | "calendar";
 type SortField = "date" | "artist" | "venue" | "city" | "fee" | "status";
 type SortDir = "asc" | "desc";
 
@@ -31,11 +28,6 @@ interface Artist {
   name: string | null;
   email: string;
   artistName: string | null;
-}
-
-interface PromoterWithCount extends Promoter {
-  _count?: { bookings: number };
-  bookingsCount?: number;
 }
 
 // --- Icon components ---
@@ -159,12 +151,8 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [createForArtistId, setCreateForArtistId] = useState<string>("");
 
-  // Promoter state
-  const [promoters, setPromoters] = useState<PromoterWithCount[]>([]);
-  const [promotersLoading, setPromotersLoading] = useState(false);
-  const [showPromoterForm, setShowPromoterForm] = useState(false);
-  const [editingPromoter, setEditingPromoter] = useState<Promoter | null>(null);
-  const [selectedPromoter, setSelectedPromoter] = useState<PromoterWithCount | null>(null);
+  // Promoters (for booking form)
+  const [promoters, setPromoters] = useState<Promoter[]>([]);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -189,25 +177,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
-
-  // Load promoters when switching to promoters view
-  const fetchPromoters = useCallback(async () => {
-    setPromotersLoading(true);
-    try {
-      const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
-      setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
-    } catch (err) {
-      console.error("Failed to load promoters:", err);
-    } finally {
-      setPromotersLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (view === "promoters") {
-      fetchPromoters();
-    }
-  }, [view, fetchPromoters]);
 
   // --- Filtered + sorted bookings ---
   const filteredBookings = useMemo(() => {
@@ -296,8 +265,8 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
 
   async function handleEdit(booking: Booking) {
     try {
-      const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
-      setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+      const data = await api.get<Promoter[]>(`/api/promoters`);
+      setPromoters(data);
     } catch (err) {
       console.error("Failed to load promoters:", err);
     }
@@ -326,33 +295,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     setCreateForArtistId("");
   }
 
-  // Promoter CRUD
-  async function handleSavePromoter(data: Partial<Promoter>) {
-    if (editingPromoter) {
-      const updated = await api.put<Promoter>(`/api/promoters/${editingPromoter.id}`, data);
-      setPromoters((prev) =>
-        prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
-      );
-    } else {
-      const payload = { ...data };
-      const created = await api.post<Promoter>("/api/promoters", payload);
-      setPromoters((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-    }
-    setShowPromoterForm(false);
-    setEditingPromoter(null);
-  }
-
-  async function handleDeletePromoter(id: string) {
-    if (!confirm("Supprimer ce promoteur ? Les dates associées conserveront le nom du promoteur.")) return;
-    await api.delete(`/api/promoters/${id}`);
-    setPromoters((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  function handleEditPromoter(promoter: Promoter) {
-    setEditingPromoter(promoter);
-    setShowPromoterForm(true);
-  }
-
   function getArtistIdForBooking(bookingId: string): string | undefined {
     const item = bookings.find(b => b.id === bookingId);
     return item?.artistId;
@@ -374,7 +316,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   return (
     <div>
       {/* Stats Cards */}
-      {view !== "promoters" && !loading && (
+      {!loading && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <StatCard label="Dates à venir" value={stats.upcoming} />
 
@@ -386,90 +328,72 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       {/* Row 1: Title + Action button */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold">
-            {view === "promoters" ? "Promoteurs" : "Dates"}
-          </h2>
-          {view !== "promoters" && !loading && (
+          <h2 className="text-xl font-bold">Dates</h2>
+          {!loading && (
             <span className="text-sm text-gray-500">
               {filteredBookings.length} date{filteredBookings.length !== 1 ? "s" : ""}
             </span>
           )}
         </div>
 
-        {view === "promoters" ? (
-          <button
-            onClick={() => {
-              setEditingPromoter(null);
-              setShowPromoterForm(true);
-            }}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
-          >
-            + Nouveau promoteur
-          </button>
-        ) : (
-          <button
-            onClick={async () => {
-              setEditingBooking(null);
-              setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
-              setShowForm(true);
-              try {
-                const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
-                setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
-              } catch (err) {
-                console.error("Failed to load promoters:", err);
-              }
-            }}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
-          >
-            + Nouvelle date
-          </button>
-        )}
+        <button
+          onClick={async () => {
+            setEditingBooking(null);
+            setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
+            setShowForm(true);
+            try {
+              const data = await api.get<Promoter[]>(`/api/promoters`);
+              setPromoters(data);
+            } catch (err) {
+              console.error("Failed to load promoters:", err);
+            }
+          }}
+          className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+        >
+          + Nouvelle date
+        </button>
       </div>
 
       {/* Row 2: Filters | View toggle | Year nav */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         {/* Left: filters */}
-        {view !== "promoters" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-900 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm w-48 focus:outline-none focus:border-purple-500 placeholder-gray-600"
-              />
-            </div>
-
-            <select
-              value={artistFilter}
-              onChange={(e) => setArtistFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-            >
-              <option value="">Tous les artistes</option>
-              {artists.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.artistName || a.name || a.email}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="pending">En attente</option>
-              <option value="confirmed">Confirmé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search */}
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm w-48 focus:outline-none focus:border-purple-500 placeholder-gray-600"
+            />
           </div>
-        ) : (
-          <div />
-        )}
+
+          <select
+            value={artistFilter}
+            onChange={(e) => setArtistFilter(e.target.value)}
+            className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+          >
+            <option value="">Tous les artistes</option>
+            {artists.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.artistName || a.name || a.email}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="confirmed">Confirmé</option>
+            <option value="cancelled">Annulé</option>
+          </select>
+        </div>
 
         <div className="flex-1" />
 
@@ -479,7 +403,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             [
               { key: "table", label: "Liste" },
               { key: "calendar", label: "Calendrier" },
-              { key: "promoters", label: "Promoteurs" },
             ] as { key: ViewMode; label: string }[]
           ).map((item) => (
             <button
@@ -497,48 +420,35 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
         </div>
 
         {/* Right: year nav */}
-        {view !== "promoters" && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setYear((y) => y - 1)}
-              disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
-              className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              &larr;
-            </button>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-purple-500"
-            >
-              {availableYears.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setYear((y) => y + 1)}
-              disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
-              className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              &rarr;
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setYear((y) => y - 1)}
+            disabled={availableYears.length === 0 || (!availableYears.includes(year - 1) && year - 1 < Math.min(...availableYears))}
+            className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            &larr;
+          </button>
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-purple-500"
+          >
+            {availableYears.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setYear((y) => y + 1)}
+            disabled={availableYears.length === 0 || (!availableYears.includes(year + 1) && year + 1 > Math.max(...availableYears))}
+            className="px-2 py-1.5 rounded-lg text-sm bg-gray-900 border border-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            &rarr;
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      {view === "promoters" ? (
-        promotersLoading ? (
-          <div className="text-center py-16 text-gray-500">Chargement...</div>
-        ) : (
-          <PromoterList
-            promoters={promoters}
-            onEdit={handleEditPromoter}
-            onDelete={handleDeletePromoter}
-            onSelect={(p) => setSelectedPromoter(p)}
-          />
-        )
-      ) : loading ? (
+      {loading ? (
         <div className="text-center py-16 text-gray-500">Chargement...</div>
       ) : view === "calendar" ? (
         <CalendarView
@@ -570,8 +480,8 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                   setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
                   setShowForm(true);
                   try {
-                    const data = await api.get<PromoterWithCount[]>(`/api/promoters`);
-                    setPromoters(data.map(p => ({ ...p, _count: { bookings: p.bookingsCount || 0 } })));
+                    const data = await api.get<Promoter[]>(`/api/promoters`);
+                    setPromoters(data);
                   } catch (err) {
                     console.error("Failed to load promoters:", err);
                   }
@@ -740,30 +650,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             />
           )}
         </>
-      )}
-
-      {/* Promoter Form Modal */}
-      {showPromoterForm && (
-        <PromoterForm
-          promoter={editingPromoter}
-          onSave={handleSavePromoter}
-          onClose={() => {
-            setShowPromoterForm(false);
-            setEditingPromoter(null);
-          }}
-        />
-      )}
-
-      {/* Promoter Detail Panel */}
-      {selectedPromoter && (
-        <PromoterDetail
-          promoter={selectedPromoter}
-          onClose={() => setSelectedPromoter(null)}
-          onEdit={(p) => {
-            setSelectedPromoter(null);
-            handleEditPromoter(p);
-          }}
-        />
       )}
     </div>
   );

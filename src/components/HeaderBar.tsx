@@ -34,6 +34,18 @@ function SettingsIcon({ className }: { className?: string }) {
   );
 }
 
+function PeopleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="6" cy="5" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 13C2 11.343 3.79 10 6 10C8.21 10 10 11.343 10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="11" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M13 12.5C13 11.12 12.1 10 11 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -96,6 +108,7 @@ export default function HeaderBar() {
 
   if (isBooker) {
     navItems.push({ label: "Agence", href: "/agency", icon: BuildingIcon });
+    navItems.push({ label: "Promoteurs", href: "/promoters", icon: PeopleIcon });
   } else {
     navItems.push({ label: "Configuration", href: "/settings", icon: SettingsIcon });
   }
