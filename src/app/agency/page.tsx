@@ -351,7 +351,7 @@ export default function AgencyPage() {
                 {/* Members list */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                    Membres ({members.length})
+                    Bookers ({members.length})
                   </h3>
                   <div className="space-y-2">
                     {members.map((member) => (
@@ -412,9 +412,9 @@ export default function AgencyPage() {
                       <p className="text-sm mt-1">{agency?.name}</p>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 uppercase tracking-wide">Membres</label>
+                      <label className="text-xs text-gray-500 uppercase tracking-wide">Bookers</label>
                       <p className="text-sm mt-1">
-                        {agency?.memberCount} membre{(agency?.memberCount ?? 0) > 1 ? "s" : ""}
+                        {agency?.memberCount} booker{(agency?.memberCount ?? 0) > 1 ? "s" : ""}
                       </p>
                     </div>
                     <div>
