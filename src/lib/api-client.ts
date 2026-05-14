@@ -42,7 +42,10 @@ class ApiClient {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: "Request failed" }));
-      throw new Error(error.error || `HTTP ${res.status}`);
+      const err = new Error(error.error || `HTTP ${res.status}`);
+      (err as Error & { status: number; body: Record<string, unknown> }).status = res.status;
+      (err as Error & { body: Record<string, unknown> }).body = error;
+      throw err;
     }
 
     // Handle empty responses (204, etc.)

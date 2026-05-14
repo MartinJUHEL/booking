@@ -105,12 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       return { success: true };
     } catch (e: unknown) {
-      if (e instanceof Error && e.message.includes("Google")) {
-        return { success: false, needsPassword: true, email, error: e.message };
+      const err = e as Error & { status?: number; body?: { needsPassword?: boolean; needsVerification?: boolean; email?: string } };
+      if (err.status === 409 && err.body?.needsPassword) {
+        return { success: false, needsPassword: true, email: err.body.email || email, error: err.message };
       }
-      // Check if the error response contains needsVerification
-      if (e instanceof Error && e.message.includes("non vérifié")) {
-        return { success: false, needsVerification: true, email, error: e.message };
+      if (err.status === 403 || (e instanceof Error && e.message.includes("non vérifié"))) {
+        return { success: false, needsVerification: true, email, error: err.message };
       }
       const error = e instanceof Error ? e.message : "Erreur de connexion";
       return { success: false, error };
