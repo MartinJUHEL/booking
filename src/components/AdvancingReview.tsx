@@ -252,7 +252,6 @@ function AdvancingReviewPanel({
     : "";
 
   const totalAllFields = SECTIONS.reduce((sum, s) => sum + s.fields.length, 0);
-  const sentFields = localForm.fieldValues.filter(fv => fv.value).length;
   const validatedFields = localForm.fieldValues.filter(fv => fv.validatedAt).length;
 
   return (
@@ -266,7 +265,7 @@ function AdvancingReviewPanel({
             <p className="text-sm text-gray-400">
               {localForm.artistName && <span>{localForm.artistName} — </span>}
               {dateStr}
-              <span className="ml-3 text-xs text-gray-500">{validatedFields}/{sentFields}/{totalAllFields} (validés/renseignés/total)</span>
+              <span className="ml-3 text-xs text-gray-500">{validatedFields}/{totalAllFields}</span>
             </p>
           </div>
           <button
@@ -358,10 +357,6 @@ function SectionProgress({
   getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
 }) {
   const total = section.fields.length;
-  const filled = section.fields.filter(f => {
-    const fv = getFieldValue(section.key, f.key);
-    return fv && fv.value;
-  }).length;
   const validated = section.fields.filter(f => {
     const fv = getFieldValue(section.key, f.key);
     return fv?.validatedAt;
@@ -371,7 +366,7 @@ function SectionProgress({
 
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full ${allDone ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"}`}>
-      {validated}/{filled}/{total}
+      {validated}/{total}
     </span>
   );
 }
