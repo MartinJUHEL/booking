@@ -251,7 +251,8 @@ function AdvancingReviewPanel({
     ? new Date(localForm.bookingDate).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
     : "";
 
-  const totalFields = localForm.fieldValues.length;
+  const totalAllFields = SECTIONS.reduce((sum, s) => sum + s.fields.length, 0);
+  const sentFields = localForm.fieldValues.filter(fv => fv.value).length;
   const validatedFields = localForm.fieldValues.filter(fv => fv.validatedAt).length;
 
   return (
@@ -265,7 +266,7 @@ function AdvancingReviewPanel({
             <p className="text-sm text-gray-400">
               {localForm.artistName && <span>{localForm.artistName} — </span>}
               {dateStr}
-              <span className="ml-3 text-xs text-gray-500">{validatedFields}/{totalFields} valides</span>
+              <span className="ml-3 text-xs text-gray-500">{validatedFields}/{sentFields}/{totalAllFields} (validés/renseignés/total)</span>
             </p>
           </div>
           <button
@@ -281,7 +282,7 @@ function AdvancingReviewPanel({
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
               className="bg-green-500 h-2 rounded-full transition-all"
-              style={{ width: totalFields > 0 ? `${(validatedFields / totalFields) * 100}%` : "0%" }}
+              style={{ width: totalAllFields > 0 ? `${(validatedFields / totalAllFields) * 100}%` : "0%" }}
             />
           </div>
         </div>
@@ -316,14 +317,6 @@ function ReviewSection({
 }) {
   const [open, setOpen] = useState(true);
 
-  // Only show sections that have at least one submitted value
-  const filledFields = section.fields.filter(f => {
-    const fv = getFieldValue(section.key, f.key);
-    return fv && fv.value;
-  });
-
-  if (filledFields.length === 0) return null;
-
   return (
     <section className="rounded-xl border border-gray-800 overflow-hidden">
       <button
@@ -340,15 +333,14 @@ function ReviewSection({
         <div className="divide-y divide-gray-800/50">
           {section.fields.map(field => {
             const fv = getFieldValue(section.key, field.key);
-            if (!fv || !fv.value) return null;
 
             return (
               <ReviewField
                 key={field.key}
                 field={field}
                 fieldValue={fv}
-                validating={validatingId === fv.id}
-                onValidate={() => onValidate(fv)}
+                validating={fv ? validatingId === fv.id : false}
+                onValidate={fv ? () => onValidate(fv) : undefined}
               />
             );
           })}
@@ -365,22 +357,21 @@ function SectionProgress({
   section: SectionDef;
   getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
 }) {
+  const total = section.fields.length;
   const filled = section.fields.filter(f => {
     const fv = getFieldValue(section.key, f.key);
     return fv && fv.value;
-  });
-  const validated = filled.filter(f => {
+  }).length;
+  const validated = section.fields.filter(f => {
     const fv = getFieldValue(section.key, f.key);
     return fv?.validatedAt;
-  });
+  }).length;
 
-  if (filled.length === 0) return null;
-
-  const allDone = validated.length === filled.length;
+  const allDone = validated === total;
 
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full ${allDone ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"}`}>
-      {validated.length}/{filled.length}
+      {validated}/{filled}/{total}
     </span>
   );
 }
@@ -392,24 +383,30 @@ function ReviewField({
   onValidate,
 }: {
   field: FieldDef;
-  fieldValue: AdvancingFieldValue;
+  fieldValue: AdvancingFieldValue | undefined;
   validating: boolean;
-  onValidate: () => void;
+  onValidate?: () => void;
 }) {
-  const isValidated = !!fieldValue.validatedAt;
+  const isFilled = fieldValue && fieldValue.value;
+  const isValidated = !!fieldValue?.validatedAt;
 
   // Format display value
-  let displayValue = fieldValue.value || "—";
-  if (field.type === "boolean") {
-    displayValue = fieldValue.value === "true" ? "Yes" : "No";
+  let displayValue = "—";
+  if (isFilled) {
+    displayValue = fieldValue.value!;
+    if (field.type === "boolean") {
+      displayValue = fieldValue.value === "true" ? "Yes" : "No";
+    }
   }
 
   return (
-    <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : ""}`}>
+    <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : !isFilled ? "opacity-40" : ""}`}>
       {/* Label + value */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gray-500">{field.label}</p>
-        <p className="text-sm text-gray-200 break-words">{displayValue}</p>
+        <p className={`text-sm break-words ${isFilled ? "text-gray-200" : "text-gray-600 italic"}`}>
+          {isFilled ? displayValue : "Non renseigné"}
+        </p>
       </div>
 
       {/* Actions */}
@@ -418,7 +415,7 @@ function ReviewField({
           <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
             Valide
           </span>
-        ) : (
+        ) : isFilled && onValidate ? (
           <button
             onClick={onValidate}
             disabled={validating}
@@ -426,7 +423,7 @@ function ReviewField({
           >
             {validating ? "..." : "Valider"}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
