@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5160";
+// API calls go through Next.js rewrites (same-origin) to avoid cross-origin cookie issues on mobile
+const API_BASE_URL = "";
 
 class ApiClient {
   /** @deprecated kept for backward compat during migration — no longer stores JWT */

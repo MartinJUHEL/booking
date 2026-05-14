@@ -100,7 +100,7 @@ export default function LoginPage() {
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: "outline",
         size: "large",
-        width: 350,
+        width: Math.min(350, googleBtnRef.current.offsetWidth),
         text: "signin_with",
       });
     }

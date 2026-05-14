@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, use } from "react";
 import { api } from "@/lib/api-client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5062";
+const API_BASE_URL = "";
 
 interface AdvancingFieldValue {
   id: string;

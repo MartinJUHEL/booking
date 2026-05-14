@@ -11,7 +11,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Framework**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Backend**: External ASP.NET Core 8 API (separate repo: `BookingApi/`)
 - **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + Google-to-password account linking + JWT via httpOnly cookie (set by backend)
-- **API Client**: `src/lib/api-client.ts` — centralized HTTP client with cookie-based auth (`credentials: "include"`)
+- **API Client**: `src/lib/api-client.ts` — centralized HTTP client with cookie-based auth (`credentials: "include"`). API calls go through Next.js rewrites (same-origin proxy) — `API_BASE_URL = ""` (empty string, relative URLs), no cross-origin requests.
 - **Roles**: Artist / Booker (chosen at onboarding). Bookers belong to an Agency (created during onboarding, other bookers join via ephemeral invitation links).
 
 ## How Auth Works
@@ -22,7 +22,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 3. Frontend sends it to `POST /api/auth/google` on the backend
 4. Backend returns user info in body + sets JWT as httpOnly cookie
 5. `AuthProvider` (`src/lib/auth-context.tsx`) manages user state + provides `useAuth()` hook
-6. All API calls include cookies via `credentials: "include"` in `api-client.ts`
+6. All API calls include cookies via `credentials: "include"` in `api-client.ts`. Cookies are same-origin thanks to the Next.js rewrites proxy (no cross-origin cookie issues).
 
 ### Email/Password
 1. User fills in email/password (+ optional name) on login page → `POST /api/auth/register`
@@ -53,7 +53,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 | File | Purpose |
 |------|---------|
-| `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, cookie-based auth with `credentials: "include"`, file upload/download) |
+| `src/lib/api-client.ts` | HTTP client (`API_BASE_URL = ""`, relative URLs via Next.js rewrites proxy, cookie-based auth with `credentials: "include"`, file upload/download) |
 | `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook — User includes `agencyId`, `agencyName` |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification, Google-to-password account linking, and forgot password steps |
@@ -74,6 +74,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/PromoterList.tsx` | Promoter cards grid view (clickable to open detail panel) |
 | `src/components/PromoterDetail.tsx` | Side panel showing promoter details with copy-to-clipboard on each field |
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
+| `next.config.ts` | Next.js config with API rewrites proxy to backend |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
 | `src/app/invitations/[token]/page.tsx` | Booker invitation accept/reject page (artist clicks email link, authenticates, accepts or rejects) |
 | `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter). Promoter uses `agencyId` (not `userId`). |
@@ -249,7 +250,7 @@ All promoter fields (company, address, email, phone, siret, ape, vatNumber, comp
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL (default: `http://localhost:5160`) |
+| `NEXT_PUBLIC_API_URL` | Backend API base URL (default: `http://localhost:5160`). Only used in `next.config.ts` for the rewrite destination — not used in client code. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth Client ID (for GIS login button) |
 
 ## Important Notes
@@ -257,7 +258,7 @@ All promoter fields (company, address, email, phone, siret, ape, vatNumber, comp
 - **No backend code in this repo** — all API routes, database, auth validation are in the `booking-api` repo
 - **All pages are client components** — no server components with data fetching
 - **All fetch calls use `api` from `src/lib/api-client.ts`** — never use raw `fetch()` for API calls
-- **Cookie-based auth**: JWT is stored in an httpOnly cookie set by the backend. The frontend never reads/writes the JWT directly. All requests use `credentials: "include"`. Logout calls `POST /api/auth/logout` to clear the cookie.
+- **Cookie-based auth**: JWT is stored in an httpOnly cookie set by the backend. The frontend never reads/writes the JWT directly. All requests use `credentials: "include"`. Cookies are same-origin thanks to the Next.js rewrites proxy (no `SameSite=None` or cross-origin cookie issues). Logout calls `POST /api/auth/logout` to clear the cookie.
 - **File uploads** use `api.upload()` (multipart/form-data with cookie auth)
 - **File downloads** use `api.downloadFile()` (fetch + blob URL with cookie auth, not plain `<a href>`)
 - **Auth redirects**: pages check `useAuth()` and redirect to `/login` if no user, `/onboarding` if no role, or `/onboarding` if booker without agency. Invitation page (`/invitations/[token]`) and agency join page (`/agency/join/[token]`) store redirect URL in `localStorage` (`redirectAfterLogin`) so the user returns after login.
@@ -279,7 +280,7 @@ All promoter fields (company, address, email, phone, siret, ape, vatNumber, comp
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL (Railway production URL for prod, staging URL for previews) |
+| `NEXT_PUBLIC_API_URL` | Backend API base URL (Railway production URL for prod, staging URL for previews). Only used in `next.config.ts` for the rewrite destination. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth Client ID (for GIS login button) |
 
 ### Key Files
