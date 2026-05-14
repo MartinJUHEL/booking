@@ -108,7 +108,7 @@ function HomeContent() {
     }
   }
 
-  if (loading || !user || !user.role) {
+  if (loading || !user || !user.role || (user.role === "booker" && !user.agencyId)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-400">Chargement...</div>

@@ -130,12 +130,10 @@ export default function LoginPage() {
   handleGoogleCallbackRef.current = async (response: { credential: string }) => {
     setError("");
     const success = await login(response.credential);
-    if (success) {
-      setRedirecting(true);
-      router.push("/");
-    } else {
+    if (!success) {
       setError("Echec de la connexion. Verifiez que le backend est accessible.");
     }
+    // Redirect is handled by the useEffect watching `user`
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -162,8 +160,7 @@ export default function LoginPage() {
       } else {
         const result = await loginWithCredentials(email, password);
         if (result.success) {
-          setRedirecting(true);
-          router.push("/");
+          // Redirect is handled by the useEffect watching `user`
         } else if (result.needsVerification) {
           setVerificationEmail(result.email || email);
           setStep("verify");
