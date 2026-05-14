@@ -64,13 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     expiresAt?: number
   ): Promise<boolean> {
     try {
-      const res = await api.post<{ user: User }>("/api/auth/google", {
+      await api.post<{ user: User }>("/api/auth/google", {
         idToken,
         accessToken,
         refreshToken,
         expiresAt,
       });
-      setUser(res.user);
+      // Fetch full user profile (login response may omit agencyId, etc.)
+      const userData = await api.get<User>("/api/user/me");
+      setUser(userData);
       return true;
     } catch {
       return false;
@@ -92,11 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<{ success: boolean; error?: string; needsVerification?: boolean; email?: string }> {
     try {
-      const res = await api.post<{ user: User }>("/api/auth/login", {
+      await api.post<{ user: User }>("/api/auth/login", {
         email,
         password,
       });
-      setUser(res.user);
+      // Fetch full user profile (login response may omit agencyId, etc.)
+      const userData = await api.get<User>("/api/user/me");
+      setUser(userData);
       return { success: true };
     } catch (e: unknown) {
       // Check if the error response contains needsVerification
@@ -131,11 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     code: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const res = await api.post<{ user: User }>("/api/auth/verify-email", {
+      await api.post<{ user: User }>("/api/auth/verify-email", {
         email,
         code,
       });
-      setUser(res.user);
+      // Fetch full user profile
+      const userData = await api.get<User>("/api/user/me");
+      setUser(userData);
       return { success: true };
     } catch (e: unknown) {
       const error = e instanceof Error ? e.message : "Code invalide";
