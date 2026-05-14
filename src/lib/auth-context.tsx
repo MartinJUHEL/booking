@@ -23,6 +23,8 @@ interface AuthContextType {
   verifyEmail: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   resendCode: (email: string) => Promise<void>;
   setPassword: (email: string, code: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -36,6 +38,8 @@ const AuthContext = createContext<AuthContextType>({
   verifyEmail: async () => ({ success: false }),
   resendCode: async () => {},
   setPassword: async () => ({ success: false }),
+  forgotPassword: async () => {},
+  resetPassword: async () => ({ success: false }),
   logout: () => {},
   refreshUser: async () => {},
 });
@@ -182,8 +186,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function forgotPassword(email: string): Promise<void> {
+    try {
+      await api.post("/api/auth/forgot-password", { email });
+    } catch {
+      // Silently fail — always 200 from backend
+    }
+  }
+
+  async function resetPassword(
+    email: string,
+    code: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await api.post<{ user: User }>("/api/auth/reset-password", {
+        email,
+        code,
+        password,
+      });
+      const userData = await api.get<User>("/api/user/me");
+      setUser(userData);
+      return { success: true };
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e.message : "Code invalide";
+      return { success: false, error };
+    }
+  }
+
   const value = useMemo(
-    () => ({ user, loading, login, loginWithCredentials, register, verifyEmail, resendCode, setPassword, logout, refreshUser }),
+    () => ({ user, loading, login, loginWithCredentials, register, verifyEmail, resendCode, setPassword, forgotPassword, resetPassword, logout, refreshUser }),
     [user, loading, refreshUser]
   );
 

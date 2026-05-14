@@ -41,6 +41,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 4. "Resend code" button calls `POST /api/auth/resend-set-password-code` with 120s cooldown
 5. `useAuth()` exposes `setPassword(email, code, password)` method and `loginWithCredentials` returns `needsPassword: boolean`
 
+### Forgot Password
+1. Login form shows "Mot de passe oublié ?" link (only in login mode, not register)
+2. User clicks → `POST /api/auth/forgot-password` with the entered email → frontend redirects to "reset-password" step
+3. "reset-password" step: code input (6-digit) + new password field with strength validation
+4. User enters code + new password → `POST /api/auth/reset-password` → backend verifies code, updates password, sets JWT cookie → user is logged in
+5. "Resend code" button calls `POST /api/auth/forgot-password` again with 120s cooldown
+6. `useAuth()` exposes `forgotPassword(email)` and `resetPassword(email, code, password)` methods
+
 ## Key Files
 
 | File | Purpose |
@@ -48,7 +56,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, cookie-based auth with `credentials: "include"`, file upload/download) |
 | `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook — User includes `agencyId`, `agencyName` |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
-| `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step and Google-to-password account linking step |
+| `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification, Google-to-password account linking, and forgot password steps |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
 | `src/app/agency/page.tsx` | Agency management (booker-only): 3 tabs — Artistes (invite + list with presskit link: add/edit/copy/open), Bookers (invite + pending invitations + members list), Infos (agency info + billing: Nom, SIRET, N°TVA, Adresse, Pays with edit form for owner and copy-all button) |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |
