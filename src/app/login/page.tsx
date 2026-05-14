@@ -129,8 +129,10 @@ export default function LoginPage() {
   const handleGoogleCallbackRef = useRef<(response: { credential: string }) => void>(undefined);
   handleGoogleCallbackRef.current = async (response: { credential: string }) => {
     setError("");
+    setRedirecting(true);
     const success = await login(response.credential);
     if (!success) {
+      setRedirecting(false);
       setError("Echec de la connexion. Verifiez que le backend est accessible.");
     }
     // Redirect is handled by the useEffect watching `user`
