@@ -10,7 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - **Framework**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **Backend**: External ASP.NET Core 8 API (separate repo: `BookingApi/`)
-- **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + JWT via httpOnly cookie (set by backend)
+- **Auth**: Google Identity Services (client-side) + Email/password login + Email verification (6-digit code) + Google-to-password account linking + JWT via httpOnly cookie (set by backend)
 - **API Client**: `src/lib/api-client.ts` — centralized HTTP client with cookie-based auth (`credentials: "include"`)
 - **Roles**: Artist / Booker (chosen at onboarding). Bookers belong to an Agency (created during onboarding, other bookers join via ephemeral invitation links).
 
@@ -34,6 +34,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 7. Login page toggles between "Se connecter" and "S'inscrire" modes
 8. **Password strength validation**: real-time indicator with 5 criteria (8+ chars, uppercase, lowercase, digit, special char). Submit button disabled until all criteria are met.
 
+### Google-to-Password Account Linking
+1. User registered via Google tries to login with email/password → backend returns 409 with `needsPassword: true` + sends verification code
+2. Frontend redirects to "set-password" step: code input (6-digit) + new password field with strength validation
+3. User enters code + new password → `POST /api/auth/set-password` → backend verifies code, hashes password, sets JWT cookie → user is logged in
+4. "Resend code" button calls `POST /api/auth/resend-set-password-code` with 120s cooldown
+5. `useAuth()` exposes `setPassword(email, code, password)` method and `loginWithCredentials` returns `needsPassword: boolean`
+
 ## Key Files
 
 | File | Purpose |
@@ -41,7 +48,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/lib/api-client.ts` | HTTP client (base URL from `NEXT_PUBLIC_API_URL`, cookie-based auth with `credentials: "include"`, file upload/download) |
 | `src/lib/auth-context.tsx` | `AuthProvider`, `useAuth()` hook — User includes `agencyId`, `agencyName` |
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
-| `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step |
+| `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification step and Google-to-password account linking step |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
 | `src/app/agency/page.tsx` | Agency management (booker-only): 3 tabs — Artistes (invite + list with presskit link: add/edit/copy/open), Bookers (invite + pending invitations + members list), Infos (agency info + billing: Nom, SIRET, N°TVA, Adresse, Pays with edit form for owner and copy-all button) |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |

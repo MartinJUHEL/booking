@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api-client";
 
-type Step = "form" | "verify";
+type Step = "form" | "verify" | "set-password";
 
 interface PasswordStrength {
   score: number; // 0-4
@@ -44,7 +45,7 @@ function isPasswordValid(checks: PasswordStrength["checks"]): boolean {
 }
 
 export default function LoginPage() {
-  const { user, loading, login, loginWithCredentials, register, verifyEmail, resendCode } = useAuth();
+  const { user, loading, login, loginWithCredentials, register, verifyEmail, resendCode, setPassword: setPasswordApi } = useAuth();
   const router = useRouter();
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
@@ -59,6 +60,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>("form");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -163,6 +165,10 @@ export default function LoginPage() {
         const result = await loginWithCredentials(email, password);
         if (result.success) {
           // Redirect is handled by the useEffect watching `user`
+        } else if (result.needsPassword) {
+          setVerificationEmail(result.email || email);
+          setStep("set-password");
+          setResendCooldown(120);
         } else if (result.needsVerification) {
           setVerificationEmail(result.email || email);
           setStep("verify");
@@ -323,7 +329,134 @@ export default function LoginPage() {
             />
             {isRegister && password.length > 0 && (() => {
               const strength = getPasswordStrength(password);
-              return (
+  // Set password step (Google-only account wants to add password)
+  if (step === "set-password") {
+    const strength = getPasswordStrength(newPassword);
+    const passwordReady = isPasswordValid(strength.checks);
+
+    async function handleSetPassword(e: React.FormEvent) {
+      e.preventDefault();
+      setError("");
+      setSubmitting(true);
+
+      try {
+        const result = await setPasswordApi(verificationEmail, code, newPassword);
+        if (result.success) {
+          setRedirecting(true);
+        } else {
+          setError(result.error || "Code invalide ou expiré");
+        }
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    async function handleResendSetPassword() {
+      setError("");
+      try {
+        await api.post("/api/auth/resend-set-password-code", { email: verificationEmail });
+      } catch { /* silently fail */ }
+      setResendCooldown(120);
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <h1 className="text-2xl font-bold mb-2">Définir un mot de passe</h1>
+          <p className="text-gray-400 mb-6">
+            Votre compte <span className="text-white font-medium">{verificationEmail}</span> a été créé via Google.
+            Vérifiez votre email et définissez un mot de passe pour vous connecter aussi par email.
+          </p>
+
+          <form onSubmit={handleSetPassword} className="space-y-4 text-left">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Code de vérification</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                maxLength={6}
+                className="w-full px-3 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-center text-2xl tracking-[0.5em] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="000000"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Nouveau mot de passe</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="Min. 8 caractères"
+              />
+              {newPassword.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
+                        style={{ width: `${(strength.score / 5) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 w-20 text-right">{strength.label}</span>
+                  </div>
+                  <ul className="text-xs space-y-0.5">
+                    {[
+                      { key: "minLength" as const, label: "8 caracteres minimum" },
+                      { key: "hasUpper" as const, label: "Une majuscule" },
+                      { key: "hasLower" as const, label: "Une minuscule" },
+                      { key: "hasDigit" as const, label: "Un chiffre" },
+                      { key: "hasSpecial" as const, label: "Un caractere special (!@#$...)" },
+                    ].map(({ key, label }) => (
+                      <li key={key} className={strength.checks[key] ? "text-green-400" : "text-gray-500"}>
+                        {strength.checks[key] ? "\u2713" : "\u2717"} {label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={submitting || code.length !== 6 || !passwordReady}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+            >
+              {submitting ? "Enregistrement..." : "Définir le mot de passe"}
+            </button>
+          </form>
+
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={handleResendSetPassword}
+              disabled={resendCooldown > 0}
+              className="text-sm text-blue-400 hover:text-blue-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0
+                ? `Renvoyer le code (${resendCooldown}s)`
+                : "Renvoyer le code"}
+            </button>
+            <br />
+            <button
+              onClick={() => { setStep("form"); setCode(""); setNewPassword(""); setError(""); }}
+              className="text-sm text-gray-400 hover:text-gray-300"
+            >
+              Retour
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-sm mt-4">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
                 <div className="mt-2 space-y-2">
                   {/* Strength bar */}
                   <div className="flex items-center gap-2">

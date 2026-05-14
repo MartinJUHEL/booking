@@ -18,10 +18,11 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (idToken: string, accessToken?: string, refreshToken?: string, expiresAt?: number) => Promise<boolean>;
-  loginWithCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean; email?: string }>;
+  loginWithCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean; needsPassword?: boolean; email?: string }>;
   register: (email: string, password: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   verifyEmail: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   resendCode: (email: string) => Promise<void>;
+  setPassword: (email: string, code: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => ({ success: false }),
   verifyEmail: async () => ({ success: false }),
   resendCode: async () => {},
+  setPassword: async () => ({ success: false }),
   logout: () => {},
   refreshUser: async () => {},
 });
@@ -92,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loginWithCredentials(
     email: string,
     password: string
-  ): Promise<{ success: boolean; error?: string; needsVerification?: boolean; email?: string }> {
+  ): Promise<{ success: boolean; error?: string; needsVerification?: boolean; needsPassword?: boolean; email?: string }> {
     try {
       await api.post<{ user: User }>("/api/auth/login", {
         email,
@@ -103,6 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       return { success: true };
     } catch (e: unknown) {
+      if (e instanceof Error && e.message.includes("Google")) {
+        return { success: false, needsPassword: true, email, error: e.message };
+      }
       // Check if the error response contains needsVerification
       if (e instanceof Error && e.message.includes("non vérifié")) {
         return { success: false, needsVerification: true, email, error: e.message };
@@ -157,8 +162,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function setPassword(
+    email: string,
+    code: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await api.post<{ user: User }>("/api/auth/set-password", {
+        email,
+        code,
+        password,
+      });
+      const userData = await api.get<User>("/api/user/me");
+      setUser(userData);
+      return { success: true };
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e.message : "Code invalide";
+      return { success: false, error };
+    }
+  }
+
   const value = useMemo(
-    () => ({ user, loading, login, loginWithCredentials, register, verifyEmail, resendCode, logout, refreshUser }),
+    () => ({ user, loading, login, loginWithCredentials, register, verifyEmail, resendCode, setPassword, logout, refreshUser }),
     [user, loading, refreshUser]
   );
 
