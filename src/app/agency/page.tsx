@@ -17,6 +17,8 @@ interface Agency {
   billingVatNumber: string | null;
   billingAddress: string | null;
   billingCountry: string | null;
+  defaultCommissionPercent: number | null;
+  defaultPaymentTerms: string | null;
 }
 
 interface Member {
@@ -76,6 +78,8 @@ export default function AgencyPage() {
   const [billingVatNumber, setBillingVatNumber] = useState("");
   const [billingAddress, setBillingAddress] = useState("");
   const [billingCountry, setBillingCountry] = useState("");
+  const [defaultCommissionPercent, setDefaultCommissionPercent] = useState("");
+  const [defaultPaymentTerms, setDefaultPaymentTerms] = useState("");
   const [savingBilling, setSavingBilling] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -193,6 +197,8 @@ export default function AgencyPage() {
     setBillingVatNumber(agency?.billingVatNumber ?? "");
     setBillingAddress(agency?.billingAddress ?? "");
     setBillingCountry(agency?.billingCountry ?? "");
+    setDefaultCommissionPercent(agency?.defaultCommissionPercent?.toString() ?? "");
+    setDefaultPaymentTerms(agency?.defaultPaymentTerms ?? "");
     setBillingError(null);
     setEditingBilling(true);
   }
@@ -208,6 +214,8 @@ export default function AgencyPage() {
         billingVatNumber: billingVatNumber.trim() || null,
         billingAddress: billingAddress.trim() || null,
         billingCountry: billingCountry.trim() || null,
+        defaultCommissionPercent: defaultCommissionPercent ? parseFloat(defaultCommissionPercent) : null,
+        defaultPaymentTerms: defaultPaymentTerms.trim() || null,
       });
       setAgency(updated);
       setEditingBilling(false);
@@ -687,6 +695,29 @@ export default function AgencyPage() {
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
                         />
                       </div>
+                      <div className="pt-4 border-t border-gray-700 mt-4">
+                        <h4 className="text-sm font-medium text-gray-300 mb-3">Valeurs par défaut (propositions)</h4>
+                        <div>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Commission (%)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={defaultCommissionPercent}
+                            onChange={(e) => setDefaultCommissionPercent(e.target.value)}
+                            placeholder="15"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Conditions de paiement</label>
+                          <textarea
+                            value={defaultPaymentTerms}
+                            onChange={(e) => setDefaultPaymentTerms(e.target.value)}
+                            placeholder="50% à la signature ; 50% le lendemain"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500 min-h-[60px] resize-y"
+                          />
+                        </div>
+                      </div>
                       {billingError && (
                         <p className="text-red-400 text-sm">{billingError}</p>
                       )}
@@ -741,6 +772,23 @@ export default function AgencyPage() {
                             <div>
                               <label className="text-xs text-gray-500 uppercase tracking-wide">Pays</label>
                               <p className="text-sm mt-1">{agency.billingCountry}</p>
+                            </div>
+                          )}
+                          {(agency?.defaultCommissionPercent != null || agency?.defaultPaymentTerms) && (
+                            <div className="pt-3 mt-3 border-t border-gray-700">
+                              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Valeurs par défaut</h4>
+                              {agency?.defaultCommissionPercent != null && (
+                                <div>
+                                  <label className="text-xs text-gray-500 uppercase tracking-wide">Commission</label>
+                                  <p className="text-sm mt-1">{agency.defaultCommissionPercent}%</p>
+                                </div>
+                              )}
+                              {agency?.defaultPaymentTerms && (
+                                <div className="mt-2">
+                                  <label className="text-xs text-gray-500 uppercase tracking-wide">Conditions de paiement</label>
+                                  <p className="text-sm mt-1 whitespace-pre-wrap">{agency.defaultPaymentTerms}</p>
+                                </div>
+                              )}
                             </div>
                           )}
                           <div className="pt-2">

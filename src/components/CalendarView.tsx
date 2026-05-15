@@ -112,9 +112,11 @@ export default function CalendarView<T extends BookingListItem>({
                     className={`w-full text-left text-xs px-2 py-1 rounded mb-1 truncate transition-colors ${
                       b.status === "confirmed"
                         ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                        : b.status === "cancelled"
+                        : b.status === "cancelled" || b.status === "declined"
                           ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                          : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                          : b.status === "proposal"
+                            ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                            : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
                     }`}
                   >
                     {renderLabel ? renderLabel(b) : `${b.venue} - ${b.city}`}

@@ -117,4 +117,15 @@ export interface Booking {
   user?: { name: string | null; email: string };
   createdAt: string;
   updatedAt: string;
+  // Proposal fields
+  format: string | null;
+  setDuration: number | null;
+  lineup: string | null;
+  ticketPrice: string | null;
+  announcementDate: string | null;
+  numberOfInvitations: number | null;
+  exclusivity: string | null;
+  commissionPercent: number | null;
+  paymentTerms: string | null;
+  contractFileUrl: string | null;
 }

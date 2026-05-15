@@ -19,6 +19,7 @@ interface Props {
   onClose: () => void;
   onPromoterCreated?: (promoter: Promoter) => void;
   artistId?: string;
+  agencyDefaults?: { defaultCommissionPercent?: number | null; defaultPaymentTerms?: string | null };
 }
 
 function emptyLeg(): TransportLeg {
@@ -43,7 +44,9 @@ const transportModes = [
   { value: "other", label: "Autre" },
 ];
 
-export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated, artistId }: Props) {
+export default function BookingForm({ booking, promoters, onSave, onClose, onPromoterCreated, artistId, agencyDefaults }: Props) {
+  const isProposal = !booking || booking.status === "proposal";
+
   const [form, setForm] = useState({
     date: booking?.date ? new Date(booking.date).toISOString().split("T")[0] : "",
     time: booking?.time || "",
@@ -71,7 +74,17 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
       notes: booking?.hotel?.notes || "",
     },
     notes: booking?.notes || "",
-    status: booking?.status || "pending",
+    status: booking?.status || "proposal",
+    // Proposal fields (use agency defaults for new proposals)
+    format: booking?.format || "",
+    setDuration: booking?.setDuration?.toString() || "",
+    lineup: booking?.lineup || "",
+    ticketPrice: booking?.ticketPrice || "",
+    announcementDate: booking?.announcementDate ? new Date(booking.announcementDate).toISOString().split("T")[0] : "",
+    numberOfInvitations: booking?.numberOfInvitations?.toString() || "",
+    exclusivity: booking?.exclusivity || "",
+    commissionPercent: booking?.commissionPercent?.toString() || (!booking && agencyDefaults?.defaultCommissionPercent != null ? agencyDefaults.defaultCommissionPercent.toString() : ""),
+    paymentTerms: booking?.paymentTerms || (!booking && agencyDefaults?.defaultPaymentTerms ? agencyDefaults.defaultPaymentTerms : ""),
   });
 
   const [promoterMode, setPromoterMode] = useState<"select" | "new">(
@@ -103,13 +116,23 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const data = {
+    const data: Record<string, unknown> = {
       ...form,
       fee: parseFloat(form.fee) || 0,
       hotel: {
         ...form.hotel,
         checkIn: form.hotel.checkIn || null,
       },
+      // Proposal fields
+      format: form.format || null,
+      setDuration: form.setDuration ? parseInt(form.setDuration) : null,
+      lineup: form.lineup || null,
+      ticketPrice: form.ticketPrice || null,
+      announcementDate: form.announcementDate || null,
+      numberOfInvitations: form.numberOfInvitations ? parseInt(form.numberOfInvitations) : null,
+      exclusivity: form.exclusivity || null,
+      commissionPercent: form.commissionPercent ? parseFloat(form.commissionPercent) : null,
+      paymentTerms: form.paymentTerms || null,
     };
     if (promoterMode === "new") {
       data.promoterId = "";
@@ -265,7 +288,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
       <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <h2 className="text-lg font-bold">
-            {booking ? "Modifier la date" : "Nouvelle date"}
+            {booking ? (isProposal ? "Modifier la proposition" : "Modifier la date") : "Nouvelle proposition"}
           </h2>
           <button
             onClick={onClose}
@@ -521,40 +544,138 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
             </label>
           </fieldset>
 
-          {/* Status */}
-          <Field label="Statut">
-            <select
-              value={form.status}
-              onChange={(e) => set("status", e.target.value)}
-              className="input"
-            >
-              <option value="pending">En attente</option>
-              <option value="confirmed">Confirmé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
-          </Field>
+          {/* Proposal fields */}
+          {isProposal && (
+            <fieldset className="space-y-3 rounded-xl border border-gray-800 p-4">
+              <legend className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Proposition</legend>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Format">
+                  <select
+                    value={form.format}
+                    onChange={(e) => set("format", e.target.value)}
+                    className="input"
+                  >
+                    <option value="">-- Choisir --</option>
+                    <option value="djset">DJ Set</option>
+                    <option value="live">Live</option>
+                  </select>
+                </Field>
+                <Field label="Durée du set (min)">
+                  <input
+                    type="number"
+                    value={form.setDuration}
+                    onChange={(e) => set("setDuration", e.target.value)}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    className="input"
+                    placeholder="90"
+                  />
+                </Field>
+              </div>
+              <Field label="Programme / Lineup">
+                <textarea
+                  value={form.lineup}
+                  onChange={(e) => set("lineup", e.target.value)}
+                  className="input min-h-[80px] resize-y"
+                  placeholder="23H00-00H30 : DJ A&#10;00H30-02H00 : DJ B&#10;02H00-03H30 : DJ C"
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Prix d'entrée">
+                  <input
+                    value={form.ticketPrice}
+                    onChange={(e) => set("ticketPrice", e.target.value)}
+                    className="input"
+                    placeholder="18€"
+                  />
+                </Field>
+                <Field label="Date d'annonce">
+                  <input
+                    type="date"
+                    value={form.announcementDate}
+                    onChange={(e) => set("announcementDate", e.target.value)}
+                    className="input"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Nombre d'invitations">
+                  <input
+                    type="number"
+                    value={form.numberOfInvitations}
+                    onChange={(e) => set("numberOfInvitations", e.target.value)}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    className="input"
+                    placeholder="4"
+                  />
+                </Field>
+                <Field label="Commission (%)">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.commissionPercent}
+                    onChange={(e) => set("commissionPercent", e.target.value)}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    className="input"
+                    placeholder="15"
+                  />
+                </Field>
+              </div>
+              <Field label="Exclusivité">
+                <input
+                  value={form.exclusivity}
+                  onChange={(e) => set("exclusivity", e.target.value)}
+                  className="input"
+                  placeholder="Période & périmètre, ou /"
+                />
+              </Field>
+              <Field label="Conditions de paiement">
+                <textarea
+                  value={form.paymentTerms}
+                  onChange={(e) => set("paymentTerms", e.target.value)}
+                  className="input min-h-[60px] resize-y"
+                  placeholder="50% à la signature ; 50% le lendemain"
+                />
+              </Field>
+            </fieldset>
+          )}
 
-          {/* Checkboxes */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Checkbox
-              label="Contrat signé"
-              checked={form.contractSigned}
-              onChange={(v) => set("contractSigned", v)}
-            />
-            <Checkbox
-              label="Fees agence payés"
-              checked={form.agencyFeesPaid}
-              onChange={(v) => set("agencyFeesPaid", v)}
-            />
-            <Checkbox
-              label="Fees artiste payés"
-              checked={form.artistFeesPaid}
-              onChange={(v) => set("artistFeesPaid", v)}
-            />
-          </div>
+          {/* Status - only for confirmed bookings */}
+          {!isProposal && (
+            <Field label="Statut">
+              <select
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+                className="input"
+              >
+                <option value="confirmed">Confirmé</option>
+                <option value="cancelled">Annulé</option>
+              </select>
+            </Field>
+          )}
 
-          {/* Transport */}
-          {form.transports.map((transport, tIdx) => (
+          {/* Checkboxes - only for confirmed bookings */}
+          {!isProposal && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Checkbox
+                label="Contrat signé"
+                checked={form.contractSigned}
+                onChange={(v) => set("contractSigned", v)}
+              />
+              <Checkbox
+                label="Fees agence payés"
+                checked={form.agencyFeesPaid}
+                onChange={(v) => set("agencyFeesPaid", v)}
+              />
+              <Checkbox
+                label="Fees artiste payés"
+                checked={form.artistFeesPaid}
+                onChange={(v) => set("artistFeesPaid", v)}
+              />
+            </div>
+          )}
+
+          {/* Transport - only for confirmed bookings */}
+          {!isProposal && form.transports.map((transport, tIdx) => (
             <div key={transport.type} className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
               <Checkbox
                 label={transport.type === "outbound" ? "Transport aller réservé" : "Transport retour réservé"}
@@ -679,7 +800,8 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
             </div>
           ))}
 
-          {/* Hotel */}
+          {/* Hotel - only for confirmed bookings */}
+          {!isProposal && (
           <div className="space-y-3 p-4 rounded-xl bg-gray-800/30 border border-gray-800">
             <Checkbox
               label="Hotel réservé"
@@ -770,6 +892,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
               </div>
             )}
           </div>
+          )}
 
           {/* Notes */}
           <Field label="Notes">
@@ -795,7 +918,7 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
               disabled={saving}
               className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
             >
-              {saving ? "Enregistrement..." : booking ? "Enregistrer" : "Ajouter"}
+              {saving ? "Enregistrement..." : booking ? "Enregistrer" : "Créer la proposition"}
             </button>
           </div>
         </form>

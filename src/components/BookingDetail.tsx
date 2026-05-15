@@ -6,31 +6,44 @@ import { api } from "@/lib/api-client";
 import AdvancingReview from "./AdvancingReview";
 
 const statusColors: Record<string, string> = {
+  proposal: "bg-blue-500/20 text-blue-400",
   pending: "bg-yellow-500/20 text-yellow-400",
   confirmed: "bg-green-500/20 text-green-400",
   cancelled: "bg-red-500/20 text-red-400",
+  declined: "bg-red-500/20 text-red-400",
 };
 
 const statusLabels: Record<string, string> = {
+  proposal: "Proposition",
   pending: "En attente",
   confirmed: "Confirmé",
   cancelled: "Annulé",
+  declined: "Refusée",
+};
+
+const formatLabels: Record<string, string> = {
+  djset: "DJ Set",
+  live: "Live",
 };
 
 export default function BookingDetail({
   bookingId,
   onClose,
   onEdit,
+  onBookingChanged,
   role,
 }: {
   bookingId: string;
   onClose: () => void;
   onEdit?: (b: Booking) => void;
+  onBookingChanged?: () => void;
   role?: "artist" | "booker";
 }) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [declining, setDeclining] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -40,6 +53,34 @@ export default function BookingDetail({
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [bookingId]);
+
+  async function handleValidate() {
+    if (!booking) return;
+    setValidating(true);
+    try {
+      const updated = await api.post<Booking>(`/api/bookings/${booking.id}/validate`);
+      setBooking(updated);
+      onBookingChanged?.();
+    } catch (err) {
+      console.error("Failed to validate proposal:", err);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function handleDecline() {
+    if (!booking || !confirm("Refuser cette proposition ?")) return;
+    setDeclining(true);
+    try {
+      const updated = await api.post<Booking>(`/api/bookings/${booking.id}/decline`);
+      setBooking(updated);
+      onBookingChanged?.();
+    } catch (err) {
+      console.error("Failed to decline proposal:", err);
+    } finally {
+      setDeclining(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -106,6 +147,26 @@ export default function BookingDetail({
               {booking.allInclusive && <span className="ml-2 text-xs font-medium text-emerald-400">(All Inclusive)</span>}
             </span>
           </div>
+
+          {/* Proposal actions */}
+          {booking.status === "proposal" && role === "booker" && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleValidate}
+                disabled={validating}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                {validating ? "Validation..." : "Valider la proposition"}
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={declining}
+                className="flex-1 bg-red-600/20 hover:bg-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed text-red-400 font-medium px-4 py-2 rounded-lg text-sm transition-colors border border-red-600/30"
+              >
+                {declining ? "Refus..." : "Refuser"}
+              </button>
+            </div>
+          )}
 
           {/* Event info */}
           <section className="space-y-3">
@@ -183,6 +244,83 @@ export default function BookingDetail({
               </div>
             </div>
           </section>
+
+          {/* Proposal details */}
+          {(booking.status === "proposal" || booking.status === "declined") && (
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Détails de la proposition</h3>
+              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
+                {booking.format && (
+                  <div>
+                    <p className="text-xs text-gray-500">Format</p>
+                    <p className="text-sm font-medium">{formatLabels[booking.format] || booking.format}</p>
+                  </div>
+                )}
+                {booking.setDuration && (
+                  <div>
+                    <p className="text-xs text-gray-500">Durée du set</p>
+                    <p className="text-sm text-gray-300">{booking.setDuration} mins</p>
+                  </div>
+                )}
+                {booking.lineup && (
+                  <div>
+                    <p className="text-xs text-gray-500">Programme</p>
+                    <p className="text-sm text-gray-300 whitespace-pre-wrap">{booking.lineup}</p>
+                  </div>
+                )}
+                {booking.ticketPrice && (
+                  <div>
+                    <p className="text-xs text-gray-500">Prix d&apos;entrée</p>
+                    <p className="text-sm text-gray-300">{booking.ticketPrice}</p>
+                  </div>
+                )}
+                {booking.announcementDate && (
+                  <div>
+                    <p className="text-xs text-gray-500">Date d&apos;annonce</p>
+                    <p className="text-sm text-gray-300">
+                      {new Date(booking.announcementDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                )}
+                {booking.numberOfInvitations != null && (
+                  <div>
+                    <p className="text-xs text-gray-500">Invitations</p>
+                    <p className="text-sm text-gray-300">{booking.numberOfInvitations} pax</p>
+                  </div>
+                )}
+                {booking.exclusivity && (
+                  <div>
+                    <p className="text-xs text-gray-500">Exclusivité</p>
+                    <p className="text-sm text-gray-300">{booking.exclusivity}</p>
+                  </div>
+                )}
+                {booking.commissionPercent != null && (
+                  <div>
+                    <p className="text-xs text-gray-500">Commission</p>
+                    <p className="text-sm text-gray-300">{booking.commissionPercent}%</p>
+                  </div>
+                )}
+                {booking.paymentTerms && (
+                  <div>
+                    <p className="text-xs text-gray-500">Conditions de paiement</p>
+                    <p className="text-sm text-gray-300 whitespace-pre-wrap">{booking.paymentTerms}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Contract */}
+          {booking.contractFileUrl && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrat</h3>
+              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4">
+                <a href={booking.contractFileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                  Voir le contrat
+                </a>
+              </div>
+            </section>
+          )}
 
           {/* Checklist */}
           <section className="space-y-2">

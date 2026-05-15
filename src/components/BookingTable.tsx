@@ -3,15 +3,19 @@
 import type { BookingListItem } from "./types";
 
 const statusColors: Record<string, string> = {
+  proposal: "bg-blue-500/20 text-blue-400",
   pending: "bg-yellow-500/20 text-yellow-400",
   confirmed: "bg-green-500/20 text-green-400",
   cancelled: "bg-red-500/20 text-red-400",
+  declined: "bg-red-500/20 text-red-400",
 };
 
 const statusLabels: Record<string, string> = {
+  proposal: "Proposition",
   pending: "En attente",
   confirmed: "Confirmé",
   cancelled: "Annulé",
+  declined: "Refusée",
 };
 
 function Check({ checked, onClick }: { checked: boolean; onClick?: () => void }) {
