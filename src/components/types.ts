@@ -57,7 +57,6 @@ export interface Transport {
 export interface BookingListItem {
   id: string;
   date: string;
-  time: string | null;
   promoter: string;
   promoterId: string | null;
   venue: string;
@@ -95,7 +94,6 @@ export interface PaginatedResponse<T> {
 export interface Booking {
   id: string;
   date: string;
-  time: string | null;
   promoter: string;
   promoterId: string | null;
   promoterRel?: Promoter | null;

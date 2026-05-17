@@ -109,9 +109,6 @@ export default function BookingTable({
                       year: "numeric",
                     })}
                   </div>
-                  {b.time && (
-                    <div className="text-xs text-gray-500">{b.time}</div>
-                  )}
                 </td>
                 <td className="px-4 py-3 font-medium">{b.venue}</td>
                 <td className="px-4 py-3">

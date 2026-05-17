@@ -552,9 +552,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                           year: "numeric",
                         })}
                       </div>
-                      {b.time && (
-                        <div className="text-xs text-gray-500">{b.time}</div>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">

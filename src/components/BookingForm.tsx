@@ -49,7 +49,6 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
 
   const [form, setForm] = useState({
     date: booking?.date ? new Date(booking.date).toISOString().split("T")[0] : "",
-    time: booking?.time || "",
     promoter: booking?.promoter || "",
     promoterId: booking?.promoterId || "",
     venue: booking?.venue || "",
@@ -299,22 +298,14 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Date & Time */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Date */}
+          <div>
             <Field label="Date *">
               <input
                 type="date"
                 required
                 value={form.date}
                 onChange={(e) => set("date", e.target.value)}
-                className="input"
-              />
-            </Field>
-            <Field label="Heure">
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => set("time", e.target.value)}
                 className="input"
               />
             </Field>

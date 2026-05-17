@@ -177,12 +177,6 @@ export default function BookingDetail({
                   <p className="text-xs text-gray-500">Date</p>
                   <p className="text-sm font-medium capitalize">{dateStr}</p>
                 </div>
-                {booking.time && (
-                  <div>
-                    <p className="text-xs text-gray-500">Heure</p>
-                    <p className="text-sm font-medium">{booking.time}</p>
-                  </div>
-                )}
               </div>
               <div>
                 <p className="text-xs text-gray-500">Salle</p>
