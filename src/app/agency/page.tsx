@@ -629,10 +629,10 @@ export default function AgencyPage() {
                   </div>
                 </div>
 
-                {/* Billing info */}
-                <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl">
+                {/* Default proposal values */}
+                <div className="mb-8 p-6 bg-gray-900 border border-gray-800 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Facturation</h2>
+                    <h2 className="text-lg font-semibold">Valeurs par defaut des propositions</h2>
                     {!editingBilling && (
                       <button
                         onClick={openBillingEdit}
@@ -642,79 +642,80 @@ export default function AgencyPage() {
                       </button>
                     )}
                   </div>
+                  <p className="text-xs text-gray-500 mb-4">Ces valeurs seront pre-remplies lors de la creation d&apos;une nouvelle proposition.</p>
 
                   {editingBilling ? (
                     <form onSubmit={handleSaveBilling} className="space-y-4">
                       <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nom</label>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Commission (%)</label>
                         <input
-                          type="text"
-                          value={billingName}
-                          onChange={(e) => setBillingName(e.target.value)}
-                          placeholder="Nom ou raison sociale"
+                          type="number"
+                          step="0.1"
+                          value={defaultCommissionPercent}
+                          onChange={(e) => setDefaultCommissionPercent(e.target.value)}
+                          placeholder="15"
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">SIRET</label>
-                        <input
-                          type="text"
-                          value={billingSiret}
-                          onChange={(e) => setBillingSiret(e.target.value)}
-                          placeholder="123 456 789 00012"
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">N°TVA</label>
-                        <input
-                          type="text"
-                          value={billingVatNumber}
-                          onChange={(e) => setBillingVatNumber(e.target.value)}
-                          placeholder="FR 12 345678901"
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Adresse</label>
-                        <input
-                          type="text"
-                          value={billingAddress}
-                          onChange={(e) => setBillingAddress(e.target.value)}
-                          placeholder="12 rue de la Paix, 75001 Paris"
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Pays</label>
-                        <input
-                          type="text"
-                          value={billingCountry}
-                          onChange={(e) => setBillingCountry(e.target.value)}
-                          placeholder="France"
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Conditions de paiement</label>
+                        <textarea
+                          value={defaultPaymentTerms}
+                          onChange={(e) => setDefaultPaymentTerms(e.target.value)}
+                          placeholder="50% à la signature ; 50% le lendemain"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500 min-h-[60px] resize-y"
                         />
                       </div>
                       <div className="pt-4 border-t border-gray-700 mt-4">
-                        <h4 className="text-sm font-medium text-gray-300 mb-3">Valeurs par défaut (propositions)</h4>
+                        <h4 className="text-sm font-medium text-gray-300 mb-3">Facturation</h4>
                         <div>
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Commission (%)</label>
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nom</label>
                           <input
-                            type="number"
-                            step="0.1"
-                            value={defaultCommissionPercent}
-                            onChange={(e) => setDefaultCommissionPercent(e.target.value)}
-                            placeholder="15"
+                            type="text"
+                            value={billingName}
+                            onChange={(e) => setBillingName(e.target.value)}
+                            placeholder="Nom ou raison sociale"
                             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
                           />
                         </div>
                         <div className="mt-3">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Conditions de paiement</label>
-                          <textarea
-                            value={defaultPaymentTerms}
-                            onChange={(e) => setDefaultPaymentTerms(e.target.value)}
-                            placeholder="50% à la signature ; 50% le lendemain"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500 min-h-[60px] resize-y"
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">SIRET</label>
+                          <input
+                            type="text"
+                            value={billingSiret}
+                            onChange={(e) => setBillingSiret(e.target.value)}
+                            placeholder="123 456 789 00012"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">N°TVA</label>
+                          <input
+                            type="text"
+                            value={billingVatNumber}
+                            onChange={(e) => setBillingVatNumber(e.target.value)}
+                            placeholder="FR 12 345678901"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Adresse</label>
+                          <input
+                            type="text"
+                            value={billingAddress}
+                            onChange={(e) => setBillingAddress(e.target.value)}
+                            placeholder="12 rue de la Paix, 75001 Paris"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Pays</label>
+                          <input
+                            type="text"
+                            value={billingCountry}
+                            onChange={(e) => setBillingCountry(e.target.value)}
+                            placeholder="France"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
                           />
                         </div>
                       </div>
@@ -739,6 +740,34 @@ export default function AgencyPage() {
                       </div>
                     </form>
                   ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Commission</label>
+                        <p className="text-sm mt-1">{agency?.defaultCommissionPercent != null ? `${agency.defaultCommissionPercent}%` : <span className="text-gray-600 italic">Non definie</span>}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Conditions de paiement</label>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{agency?.defaultPaymentTerms || <span className="text-gray-600 italic">Non definies</span>}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Billing info */}
+                <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Facturation</h2>
+                    {!editingBilling && (
+                      <button
+                        onClick={openBillingEdit}
+                        className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg"
+                      >
+                        Modifier
+                      </button>
+                    )}
+                  </div>
+
+                  {!editingBilling && (
                     <div>
                       {!agency?.billingName && !agency?.billingSiret && !agency?.billingVatNumber && !agency?.billingAddress && !agency?.billingCountry ? (
                         <p className="text-gray-500 text-sm">Aucune information de facturation renseignee.</p>
@@ -772,23 +801,6 @@ export default function AgencyPage() {
                             <div>
                               <label className="text-xs text-gray-500 uppercase tracking-wide">Pays</label>
                               <p className="text-sm mt-1">{agency.billingCountry}</p>
-                            </div>
-                          )}
-                          {(agency?.defaultCommissionPercent != null || agency?.defaultPaymentTerms) && (
-                            <div className="pt-3 mt-3 border-t border-gray-700">
-                              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Valeurs par défaut</h4>
-                              {agency?.defaultCommissionPercent != null && (
-                                <div>
-                                  <label className="text-xs text-gray-500 uppercase tracking-wide">Commission</label>
-                                  <p className="text-sm mt-1">{agency.defaultCommissionPercent}%</p>
-                                </div>
-                              )}
-                              {agency?.defaultPaymentTerms && (
-                                <div className="mt-2">
-                                  <label className="text-xs text-gray-500 uppercase tracking-wide">Conditions de paiement</label>
-                                  <p className="text-sm mt-1 whitespace-pre-wrap">{agency.defaultPaymentTerms}</p>
-                                </div>
-                              )}
                             </div>
                           )}
                           <div className="pt-2">
