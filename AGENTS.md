@@ -58,16 +58,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/app/page.tsx` | Main dashboard (client component, loads data via API) |
 | `src/app/login/page.tsx` | Login/register form (email/password + Google GIS) with email verification, Google-to-password account linking, and forgot password steps |
 | `src/app/onboarding/` | Role selection (artist/booker) + agency creation step for bookers |
-| `src/app/agency/page.tsx` | Agency management (booker-only): 3 tabs — Artistes (invite + list with presskit link: add/edit/copy/open), Bookers (invite + pending invitations + members list), Infos (agency info + billing: Nom, SIRET, N°TVA, Adresse, Pays with edit form for owner and copy-all button) |
+| `src/app/agency/page.tsx` | Agency management (booker-only): 3 tabs — Artistes (invite + list with presskit link: add/edit/copy/open), Bookers (invite + pending invitations + members list), Infos (agency info + 2 independent sections: "Valeurs par defaut des propositions" with commission % and payment terms always visible even when empty, and "Facturation" with Nom/SIRET/N°TVA/Adresse/Pays — each with its own edit form, editable by any booker in the agency) |
 | `src/app/agency/join/[token]/page.tsx` | Accept ephemeral agency invitation link (validates token, email match, expiry) |
 | `src/app/promoters/page.tsx` | Promoters management page (booker-only): list, search, create, edit, delete promoters |
 | `src/app/settings/` | Google Calendar settings |
 | `src/components/HeaderBar.tsx` | Shared top navigation bar — icon nav tabs (Booking, Agence, Promoteurs for bookers / Configuration for artists), user dropdown with logout. Uses `useAuth()` and `usePathname()`. Active tab highlighted with purple underline. |
 | `src/components/Dashboard.tsx` | Artist dashboard (read-only): Liste / Calendar tabs, stats cards, search + status filter, no create/edit/delete |
-| `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status/text filters, sortable table, Liste/Calendar toggle, stats cards |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport |
+| `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status/text filters, sortable table, Liste/Calendar toggle, stats cards. Supports proposal status (blue) and declined status (red). "Nouvelle proposition" button creates proposals (status=proposal). Fetches agency defaults (commission %, payment terms) to pre-fill new proposals. |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
-| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist) |
+| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields (format, set duration, lineup, ticket price, announcement date, invitations, exclusivity, commission, payment terms) and validate/decline action buttons. |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
@@ -86,7 +86,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 interface BookingListItem {
   id: string;
   date: string;
-  time: string | null;
   promoter: string;
   promoterId: string | null;
   venue: string;
@@ -99,12 +98,13 @@ interface BookingListItem {
   artistFeesPaid: boolean;
   hotelBooked: boolean;
   transportBooked: boolean;
-  status: string;
+  status: string; // "proposal" | "confirmed" | "cancelled" | "declined"
+  format: string | null; // "djset" | "live"
 }
 ```
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
-The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`.
+The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`.
 
 ### DashboardBookingItem (booker dashboard, extends BookingListItem)
 Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
@@ -167,11 +167,11 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 
 ### Booker
 - **Belongs to an Agency** — created during onboarding. Other bookers join via ephemeral invitation links (5-min expiry, sent by email from `/agency` page)
-- **Agency management page** (`/agency`): 3 tabs — **Artistes** (invite by email + list with remove + presskit URL: add/edit/copy/open link), **Bookers** (invite by email + pending invitations + members list with remove for owner), **Infos** (agency info + billing fields: Nom, SIRET, N°TVA, Adresse, Pays — editable by owner via inline form, copy-all button)
+- **Agency management page** (`/agency`): 3 tabs — **Artistes** (invite by email + list with remove + presskit URL: add/edit/copy/open link), **Bookers** (invite by email + pending invitations + members list with remove for owner), **Infos** (agency info + two independent sections: "Valeurs par defaut des propositions" with commission % and payment terms always visible even when empty, and "Facturation" with Nom/SIRET/N°TVA/Adresse/Pays — each section has its own edit form, editable by any booker in the agency, not just the owner)
 - **Join flow** (`/agency/join/[token]`): booker clicks invitation link from email, authenticates if needed (stores redirect in `localStorage`), sees agency info, clicks "Rejoindre". Email must match invitation. Link expires after 5 minutes (HTTP 410).
 - **Promoters are shared across the agency** — all bookers in the same agency see the same promoters (no per-artist filtering). Managed from the dedicated `/promoters` page.
 - **Default view**: `BookerDashboard` — shows all bookings across all managed artists in a sortable table/calendar, loaded by year (default: current year). Includes stats cards (upcoming dates, unpaid agency fees, unpaid artist fees).
-- **"+ Nouvelle date" button**: creates a booking for a selected artist. If only one artist, opens the form directly; if multiple, shows an artist selector modal first.
+- **"+ Nouvelle proposition" button**: creates a proposal (status=`proposal`) for a selected artist. If only one artist, opens the form directly; if multiple, shows an artist selector modal first. Agency defaults (commission %, payment terms) are pre-filled.
 - **Filters**: text search + artist dropdown + status dropdown; year navigation with arrows and dropdown; sortable columns (date, artist, venue, city, fee, status)
 - **Calendar view**: shows all dates with artist name prefix (e.g. "DJ X - Club Y")
 - Clicking a booking opens `BookingDetail` side panel
@@ -198,7 +198,31 @@ Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) w
 - Checklist (contract, fees)
 - Notes
 
-The panel has a "Modifier" button to open the edit form.
+The panel has a "Modifier" button to open the edit form. For proposals, it also shows validate/decline action buttons.
+
+## Booking Statuses
+
+Bookings use a single `status` field with these values:
+- **`proposal`** (default for new bookings): lightweight proposal, hides hotel/transport/advancing in UI. Blue color in calendar (`[PROP]` prefix) and table.
+- **`confirmed`**: validated proposal or manually set. Green color (`[OK]` prefix).
+- **`cancelled`**: cancelled booking. Yellow/red color (`[X]` prefix).
+- **`declined`**: refused proposal, kept for history. Red color (`[X]` prefix).
+
+**Proposal workflow**: New booking -> status `proposal` -> booker clicks "Valider" -> `POST /api/bookings/{id}/validate` -> status becomes `confirmed` + `contractSigned=true`. Booker clicks "Refuser" -> `POST /api/bookings/{id}/decline` -> status becomes `declined`.
+
+## Proposal-specific Fields
+
+When a booking has status `proposal`, these additional fields are relevant:
+- `format`: `"djset"` or `"live"` (enum)
+- `setDuration`: duration in minutes (number)
+- `lineup`: free text describing the lineup
+- `ticketPrice`: ticket price (number)
+- `announcementDate`: date for public announcement (date)
+- `numberOfInvitations`: number of invitations (number)
+- `exclusivity`: boolean
+- `commissionPercent`: agency commission percentage (pre-filled from agency defaults)
+- `paymentTerms`: payment conditions text (pre-filled from agency defaults)
+- `contractFileUrl`: URL to attached contract (v2, not yet implemented)
 
 ## Advancing Form (Booker Only)
 
