@@ -633,7 +633,7 @@ export default function AgencyPage() {
                 <div className="p-6 bg-gray-900 border border-gray-800 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold">Facturation</h2>
-                    {!editingBilling && isOwner && (
+                    {!editingBilling && (
                       <button
                         onClick={openBillingEdit}
                         className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg"
