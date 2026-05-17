@@ -78,10 +78,13 @@ export default function AgencyPage() {
   const [billingVatNumber, setBillingVatNumber] = useState("");
   const [billingAddress, setBillingAddress] = useState("");
   const [billingCountry, setBillingCountry] = useState("");
-  const [defaultCommissionPercent, setDefaultCommissionPercent] = useState("");
-  const [defaultPaymentTerms, setDefaultPaymentTerms] = useState("");
   const [savingBilling, setSavingBilling] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [editingDefaults, setEditingDefaults] = useState(false);
+  const [defaultCommissionPercent, setDefaultCommissionPercent] = useState("");
+  const [defaultPaymentTerms, setDefaultPaymentTerms] = useState("");
+  const [savingDefaults, setSavingDefaults] = useState(false);
+  const [defaultsError, setDefaultsError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Presskit edit
@@ -197,10 +200,15 @@ export default function AgencyPage() {
     setBillingVatNumber(agency?.billingVatNumber ?? "");
     setBillingAddress(agency?.billingAddress ?? "");
     setBillingCountry(agency?.billingCountry ?? "");
-    setDefaultCommissionPercent(agency?.defaultCommissionPercent?.toString() ?? "");
-    setDefaultPaymentTerms(agency?.defaultPaymentTerms ?? "");
     setBillingError(null);
     setEditingBilling(true);
+  }
+
+  function openDefaultsEdit() {
+    setDefaultCommissionPercent(agency?.defaultCommissionPercent?.toString() ?? "");
+    setDefaultPaymentTerms(agency?.defaultPaymentTerms ?? "");
+    setDefaultsError(null);
+    setEditingDefaults(true);
   }
 
   async function handleSaveBilling(e: React.FormEvent) {
@@ -214,8 +222,8 @@ export default function AgencyPage() {
         billingVatNumber: billingVatNumber.trim() || null,
         billingAddress: billingAddress.trim() || null,
         billingCountry: billingCountry.trim() || null,
-        defaultCommissionPercent: defaultCommissionPercent ? parseFloat(defaultCommissionPercent) : null,
-        defaultPaymentTerms: defaultPaymentTerms.trim() || null,
+        defaultCommissionPercent: agency?.defaultCommissionPercent ?? null,
+        defaultPaymentTerms: agency?.defaultPaymentTerms ?? null,
       });
       setAgency(updated);
       setEditingBilling(false);
@@ -224,6 +232,30 @@ export default function AgencyPage() {
       setBillingError(message);
     } finally {
       setSavingBilling(false);
+    }
+  }
+
+  async function handleSaveDefaults(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingDefaults(true);
+    setDefaultsError(null);
+    try {
+      const updated = await api.put<Agency>("/api/agency", {
+        billingName: agency?.billingName ?? null,
+        billingSiret: agency?.billingSiret ?? null,
+        billingVatNumber: agency?.billingVatNumber ?? null,
+        billingAddress: agency?.billingAddress ?? null,
+        billingCountry: agency?.billingCountry ?? null,
+        defaultCommissionPercent: defaultCommissionPercent ? parseFloat(defaultCommissionPercent) : null,
+        defaultPaymentTerms: defaultPaymentTerms.trim() || null,
+      });
+      setAgency(updated);
+      setEditingDefaults(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur lors de la sauvegarde";
+      setDefaultsError(message);
+    } finally {
+      setSavingDefaults(false);
     }
   }
 
@@ -633,9 +665,9 @@ export default function AgencyPage() {
                 <div className="mb-8 p-6 bg-gray-900 border border-gray-800 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold">Valeurs par defaut des propositions</h2>
-                    {!editingBilling && (
+                    {!editingDefaults && (
                       <button
-                        onClick={openBillingEdit}
+                        onClick={openDefaultsEdit}
                         className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg"
                       >
                         Modifier
@@ -644,8 +676,8 @@ export default function AgencyPage() {
                   </div>
                   <p className="text-xs text-gray-500 mb-4">Ces valeurs seront pre-remplies lors de la creation d&apos;une nouvelle proposition.</p>
 
-                  {editingBilling ? (
-                    <form onSubmit={handleSaveBilling} className="space-y-4">
+                  {editingDefaults ? (
+                    <form onSubmit={handleSaveDefaults} className="space-y-4">
                       <div>
                         <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Commission (%)</label>
                         <input
@@ -666,73 +698,20 @@ export default function AgencyPage() {
                           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500 min-h-[60px] resize-y"
                         />
                       </div>
-                      <div className="pt-4 border-t border-gray-700 mt-4">
-                        <h4 className="text-sm font-medium text-gray-300 mb-3">Facturation</h4>
-                        <div>
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nom</label>
-                          <input
-                            type="text"
-                            value={billingName}
-                            onChange={(e) => setBillingName(e.target.value)}
-                            placeholder="Nom ou raison sociale"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                        <div className="mt-3">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">SIRET</label>
-                          <input
-                            type="text"
-                            value={billingSiret}
-                            onChange={(e) => setBillingSiret(e.target.value)}
-                            placeholder="123 456 789 00012"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                        <div className="mt-3">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">N°TVA</label>
-                          <input
-                            type="text"
-                            value={billingVatNumber}
-                            onChange={(e) => setBillingVatNumber(e.target.value)}
-                            placeholder="FR 12 345678901"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                        <div className="mt-3">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Adresse</label>
-                          <input
-                            type="text"
-                            value={billingAddress}
-                            onChange={(e) => setBillingAddress(e.target.value)}
-                            placeholder="12 rue de la Paix, 75001 Paris"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                        <div className="mt-3">
-                          <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Pays</label>
-                          <input
-                            type="text"
-                            value={billingCountry}
-                            onChange={(e) => setBillingCountry(e.target.value)}
-                            placeholder="France"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                      </div>
-                      {billingError && (
-                        <p className="text-red-400 text-sm">{billingError}</p>
+                      {defaultsError && (
+                        <p className="text-red-400 text-sm">{defaultsError}</p>
                       )}
                       <div className="flex gap-2 pt-1">
                         <button
                           type="submit"
-                          disabled={savingBilling}
+                          disabled={savingDefaults}
                           className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
                         >
-                          {savingBilling ? "Enregistrement..." : "Enregistrer"}
+                          {savingDefaults ? "Enregistrement..." : "Enregistrer"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingBilling(false)}
+                          onClick={() => setEditingDefaults(false)}
                           className="text-gray-400 hover:text-white px-5 py-2 rounded-lg text-sm transition-colors border border-gray-700"
                         >
                           Annuler
@@ -767,7 +746,79 @@ export default function AgencyPage() {
                     )}
                   </div>
 
-                  {!editingBilling && (
+                  {editingBilling ? (
+                    <form onSubmit={handleSaveBilling} className="space-y-4">
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nom</label>
+                        <input
+                          type="text"
+                          value={billingName}
+                          onChange={(e) => setBillingName(e.target.value)}
+                          placeholder="Nom ou raison sociale"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">SIRET</label>
+                        <input
+                          type="text"
+                          value={billingSiret}
+                          onChange={(e) => setBillingSiret(e.target.value)}
+                          placeholder="123 456 789 00012"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">N°TVA</label>
+                        <input
+                          type="text"
+                          value={billingVatNumber}
+                          onChange={(e) => setBillingVatNumber(e.target.value)}
+                          placeholder="FR 12 345678901"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Adresse</label>
+                        <input
+                          type="text"
+                          value={billingAddress}
+                          onChange={(e) => setBillingAddress(e.target.value)}
+                          placeholder="12 rue de la Paix, 75001 Paris"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Pays</label>
+                        <input
+                          type="text"
+                          value={billingCountry}
+                          onChange={(e) => setBillingCountry(e.target.value)}
+                          placeholder="France"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      {billingError && (
+                        <p className="text-red-400 text-sm">{billingError}</p>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={savingBilling}
+                          className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+                        >
+                          {savingBilling ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingBilling(false)}
+                          className="text-gray-400 hover:text-white px-5 py-2 rounded-lg text-sm transition-colors border border-gray-700"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
                     <div>
                       {!agency?.billingName && !agency?.billingSiret && !agency?.billingVatNumber && !agency?.billingAddress && !agency?.billingCountry ? (
                         <p className="text-gray-500 text-sm">Aucune information de facturation renseignee.</p>
