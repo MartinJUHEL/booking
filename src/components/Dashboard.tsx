@@ -79,9 +79,10 @@ export default function Dashboard({
           className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500"
         >
           <option value="all">Tous les statuts</option>
-          <option value="pending">En attente</option>
+          <option value="proposal">Proposition</option>
           <option value="confirmed">Confirmé</option>
           <option value="cancelled">Annulé</option>
+          <option value="declined">Refusée</option>
         </select>
         <div className="flex gap-2">
           <button

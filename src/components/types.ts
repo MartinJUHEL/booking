@@ -57,7 +57,6 @@ export interface Transport {
 export interface BookingListItem {
   id: string;
   date: string;
-  time: string | null;
   promoter: string;
   promoterId: string | null;
   venue: string;
@@ -95,7 +94,6 @@ export interface PaginatedResponse<T> {
 export interface Booking {
   id: string;
   date: string;
-  time: string | null;
   promoter: string;
   promoterId: string | null;
   promoterRel?: Promoter | null;
@@ -117,4 +115,15 @@ export interface Booking {
   user?: { name: string | null; email: string };
   createdAt: string;
   updatedAt: string;
+  // Proposal fields
+  format: string | null;
+  setDuration: number | null;
+  lineup: string | null;
+  ticketPrice: string | null;
+  announcementDate: string | null;
+  numberOfInvitations: number | null;
+  exclusivity: string | null;
+  commissionPercent: number | null;
+  paymentTerms: string | null;
+  contractFileUrl: string | null;
 }

@@ -12,15 +12,19 @@ type SortField = "date" | "artist" | "venue" | "city" | "fee" | "status";
 type SortDir = "asc" | "desc";
 
 const statusColors: Record<string, string> = {
+  proposal: "bg-blue-500/20 text-blue-400",
   pending: "bg-yellow-500/20 text-yellow-400",
   confirmed: "bg-green-500/20 text-green-400",
   cancelled: "bg-red-500/20 text-red-400",
+  declined: "bg-red-500/20 text-red-400",
 };
 
 const statusLabels: Record<string, string> = {
+  proposal: "Proposition",
   pending: "En attente",
   confirmed: "Confirmé",
   cancelled: "Annulé",
+  declined: "Refusée",
 };
 
 interface Artist {
@@ -154,6 +158,9 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   // Promoters (for booking form)
   const [promoters, setPromoters] = useState<Promoter[]>([]);
 
+  // Agency defaults
+  const [agencyDefaults, setAgencyDefaults] = useState<{ defaultCommissionPercent?: number | null; defaultPaymentTerms?: string | null }>({});
+
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
@@ -265,10 +272,14 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
 
   async function handleEdit(booking: Booking) {
     try {
-      const data = await api.get<Promoter[]>(`/api/promoters`);
+      const [data, agency] = await Promise.all([
+        api.get<Promoter[]>(`/api/promoters`),
+        api.get<{ defaultCommissionPercent?: number | null; defaultPaymentTerms?: string | null }>(`/api/agency`),
+      ]);
       setPromoters(data);
+      if (agency) setAgencyDefaults(agency);
     } catch (err) {
-      console.error("Failed to load promoters:", err);
+      console.error("Failed to load data:", err);
     }
     setEditingBooking(booking);
     setShowForm(true);
@@ -342,15 +353,19 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
             setShowForm(true);
             try {
-              const data = await api.get<Promoter[]>(`/api/promoters`);
+              const [data, agency] = await Promise.all([
+                api.get<Promoter[]>(`/api/promoters`),
+                api.get<{ defaultCommissionPercent?: number | null; defaultPaymentTerms?: string | null }>(`/api/agency`),
+              ]);
               setPromoters(data);
+              if (agency) setAgencyDefaults(agency);
             } catch (err) {
-              console.error("Failed to load promoters:", err);
+              console.error("Failed to load data:", err);
             }
           }}
           className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
         >
-          + Nouvelle date
+          + Nouvelle proposition
         </button>
       </div>
 
@@ -389,9 +404,10 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
           >
             <option value="">Tous les statuts</option>
-            <option value="pending">En attente</option>
+            <option value="proposal">Proposition</option>
             <option value="confirmed">Confirmé</option>
             <option value="cancelled">Annulé</option>
+            <option value="declined">Refusée</option>
           </select>
         </div>
 
@@ -480,15 +496,19 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                   setCreateForArtistId(artists.length === 1 ? artists[0].id : "");
                   setShowForm(true);
                   try {
-                    const data = await api.get<Promoter[]>(`/api/promoters`);
+                    const [data, agency] = await Promise.all([
+                      api.get<Promoter[]>(`/api/promoters`),
+                      api.get<{ defaultCommissionPercent?: number | null; defaultPaymentTerms?: string | null }>(`/api/agency`),
+                    ]);
                     setPromoters(data);
+                    if (agency) setAgencyDefaults(agency);
                   } catch (err) {
-                    console.error("Failed to load promoters:", err);
+                    console.error("Failed to load data:", err);
                   }
                 }}
                 className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
               >
-                + Nouvelle date
+                + Nouvelle proposition
               </button>
             </>
           )}
@@ -532,9 +552,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                           year: "numeric",
                         })}
                       </div>
-                      {b.time && (
-                        <div className="text-xs text-gray-500">{b.time}</div>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
@@ -600,6 +617,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             setSelectedBookingId(null);
             handleEdit(b);
           }}
+          onBookingChanged={fetchBookings}
           role="booker"
         />
       )}
@@ -611,7 +629,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div className="absolute inset-0 bg-black/60" onClick={() => { setShowForm(false); setCreateForArtistId(""); }} />
               <div className="relative bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4">
-                <h2 className="text-lg font-bold mb-4">Nouvelle date</h2>
+                <h2 className="text-lg font-bold mb-4">Nouvelle proposition</h2>
                 <p className="text-gray-400 text-sm mb-4">Pour quel artiste ?</p>
                 <div className="space-y-2">
                   {artists.map((a) => (
@@ -647,6 +665,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                 setPromoters((prev) => [...prev, p].sort((a, b) => a.name.localeCompare(b.name)));
               }}
               artistId={editingBooking ? getArtistIdForBooking(editingBooking.id) : createForArtistId}
+              agencyDefaults={agencyDefaults}
             />
           )}
         </>
