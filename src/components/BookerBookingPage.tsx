@@ -108,7 +108,12 @@ export default function BookerBookingPage({ bookingId }: { bookingId: string }) 
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } else {
-        await api.post(`/api/bookings/${booking.id}/validate`, {});
+        const res = await fetch(`/api/bookings/${booking.id}/validate`, {
+          method: "POST",
+          body: new FormData(),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
       }
       await fetchBooking();
       setShowValidateModal(false);

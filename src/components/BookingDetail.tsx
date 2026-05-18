@@ -75,7 +75,14 @@ export default function BookingDetail({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         updated = await res.json();
       } else {
-        updated = await api.post<Booking>(`/api/bookings/${booking.id}/validate`);
+        // Send empty FormData (endpoint expects multipart/form-data)
+        const res = await fetch(`/api/bookings/${booking.id}/validate`, {
+          method: "POST",
+          body: new FormData(),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        updated = await res.json();
       }
       setBooking(updated);
       setShowValidateModal(false);
