@@ -67,7 +67,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status/text filters, sortable table, Liste/Calendar toggle, stats cards. Supports proposal status (blue) and declined status (red). "Nouvelle proposition" button creates proposals (status=proposal). Fetches agency defaults (commission %, payment terms) to pre-fill new proposals. |
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
-| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields (format, set duration, lineup, ticket price, announcement date, invitations, exclusivity, commission, payment terms) and validate/decline action buttons. |
+| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields and validate/decline actions. Validate opens inline panel with optional contract upload. Contract section always visible with upload/download/delete. |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
@@ -104,7 +104,7 @@ interface BookingListItem {
 ```
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
-The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`.
+The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`, `contractOriginalName`.
 
 ### DashboardBookingItem (booker dashboard, extends BookingListItem)
 Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
@@ -198,7 +198,7 @@ Clicking a row in `BookingTable` opens a slide-in side panel (`BookingDetail`) w
 - Checklist (contract, fees)
 - Notes
 
-The panel has a "Modifier" button to open the edit form. For proposals, it also shows validate/decline action buttons.
+The panel has a "Modifier" button to open the edit form. For proposals, it also shows validate/decline action buttons. Validate opens an inline panel with optional contract upload before confirming.
 
 ## Booking Statuses
 
@@ -208,7 +208,14 @@ Bookings use a single `status` field with these values:
 - **`cancelled`**: cancelled booking. Yellow/red color (`[X]` prefix).
 - **`declined`**: refused proposal, kept for history. Red color (`[X]` prefix).
 
-**Proposal workflow**: New booking -> status `proposal` -> booker clicks "Valider" -> `POST /api/bookings/{id}/validate` -> status becomes `confirmed` + `contractSigned=true`. Booker clicks "Refuser" -> `POST /api/bookings/{id}/decline` -> status becomes `declined`.
+**Proposal workflow**: New booking -> status `proposal` -> booker clicks "Valider" -> optional contract upload -> `POST /api/bookings/{id}/validate` (multipart with optional file) -> status becomes `confirmed` + `contractSigned=true`. Booker clicks "Refuser" -> `POST /api/bookings/{id}/decline` -> status becomes `declined`.
+
+## Contract Upload
+
+- **During validation**: inline panel offers optional PDF/image upload before confirming. Sent as multipart to `POST /api/bookings/{id}/validate`.
+- **After the fact**: contract section in BookingDetail always visible. Upload via `POST /api/bookings/{id}/contract`, download via `GET /api/bookings/{id}/contract`, delete via `DELETE /api/bookings/{id}/contract`.
+- **Storage**: uses `IFileStorageService` (same as tickets), stored in `contracts/` folder.
+- **Accepted types**: PDF, JPEG, PNG, WebP (max 10 MB).
 
 ## Proposal-specific Fields
 
@@ -222,7 +229,8 @@ When a booking has status `proposal`, these additional fields are relevant:
 - `exclusivity`: boolean
 - `commissionPercent`: agency commission percentage (pre-filled from agency defaults)
 - `paymentTerms`: payment conditions text (pre-filled from agency defaults)
-- `contractFileUrl`: URL to attached contract (v2, not yet implemented)
+- `contractFileUrl`: stored filename (UUID.ext) of the contract
+- `contractOriginalName`: original filename for display
 
 ## Advancing Form (Booker Only)
 
