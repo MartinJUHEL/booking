@@ -65,9 +65,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/HeaderBar.tsx` | Shared top navigation bar — icon nav tabs (Booking, Agence, Promoteurs for bookers / Configuration for artists), user dropdown with logout. Uses `useAuth()` and `usePathname()`. Active tab highlighted with purple underline. |
 | `src/components/Dashboard.tsx` | Artist dashboard (read-only): Liste / Calendar tabs, stats cards, search + status filter, no create/edit/delete |
 | `src/components/BookerDashboard.tsx` | Booker dashboard: all bookings across managed artists, year-based pagination, artist/status/text filters, sortable table, Liste/Calendar toggle, stats cards. Supports proposal status (blue) and declined status (red). "Nouvelle proposition" button creates proposals (status=proposal). Fetches agency defaults (commission %, payment terms) to pre-fill new proposals. |
-| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. |
+| `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. **Contract section**: for confirmed bookings, upload/download/delete contract (below Notes). |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
-| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields and validate/decline actions. Validate opens inline panel with optional contract upload. Contract section always visible with upload/download/delete. |
+| `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields and validate/decline actions. Validate opens inline panel with optional contract upload. Contract section: download-only (upload/delete is in BookingForm). |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
@@ -213,7 +213,8 @@ Bookings use a single `status` field with these values:
 ## Contract Upload
 
 - **During validation**: inline panel offers optional PDF/image upload before confirming. Sent as multipart to `POST /api/bookings/{id}/validate`.
-- **After the fact**: contract section in BookingDetail always visible. Upload via `POST /api/bookings/{id}/contract`, download via `GET /api/bookings/{id}/contract`, delete via `DELETE /api/bookings/{id}/contract`.
+- **From edit form (BookingForm)**: for confirmed bookings, contract upload/download/delete section below Notes. Upload via `POST /api/bookings/{id}/contract`, download via `GET /api/bookings/{id}/contract`, delete via `DELETE /api/bookings/{id}/contract`.
+- **From detail view (BookingDetail)**: download-only (no upload/delete).
 - **Storage**: uses `IFileStorageService` (same as tickets), stored in `contracts/` folder.
 - **Accepted types**: PDF, JPEG, PNG, WebP (max 10 MB).
 

@@ -112,6 +112,41 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
   }
 
   const [saving, setSaving] = useState(false);
+  const [contractName, setContractName] = useState<string | null>(booking?.contractOriginalName || null);
+  const [contractUploading, setContractUploading] = useState(false);
+
+  async function handleContractUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !booking) return;
+    setContractUploading(true);
+    try {
+      const res = await api.upload<{ contractOriginalName: string }>(`/api/bookings/${booking.id}/contract`, file);
+      setContractName(res.contractOriginalName || file.name);
+    } catch {
+      alert("Erreur lors de l'envoi du contrat");
+    } finally {
+      setContractUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleContractDownload() {
+    if (!booking) return;
+    await api.downloadFile(`/api/bookings/${booking.id}/contract`, contractName || "contract");
+  }
+
+  async function handleContractDelete() {
+    if (!booking || !confirm("Supprimer le contrat ?")) return;
+    setContractUploading(true);
+    try {
+      await api.delete(`/api/bookings/${booking.id}/contract`);
+      setContractName(null);
+    } catch {
+      alert("Erreur lors de la suppression");
+    } finally {
+      setContractUploading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -894,6 +929,48 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
               placeholder="Informations complémentaires..."
             />
           </Field>
+
+          {/* Contract - only for existing confirmed bookings */}
+          {booking && booking.status === "confirmed" && (
+            <div className="space-y-2">
+              <span className="text-sm text-gray-400 block">Contrat</span>
+              {contractName ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                  <svg className="w-5 h-5 text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span className="text-sm text-gray-200 truncate flex-1">{contractName}</span>
+                  <button
+                    type="button"
+                    onClick={handleContractDownload}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    Télécharger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleContractDelete}
+                    disabled={contractUploading}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors">
+                    {contractUploading ? "Envoi..." : "Ajouter un contrat"}
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={handleContractUpload}
+                      disabled={contractUploading}
+                    />
+                  </label>
+                  <span className="text-xs text-gray-500">PDF, JPEG, PNG, WebP (max 10 Mo)</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 justify-end pt-2">
