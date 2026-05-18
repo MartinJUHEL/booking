@@ -574,7 +574,13 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Check checked={b.contractSigned} tooltip="Contrat signé" />
+                      {!b.contractSigned && b.status === "confirmed" ? (
+                        <span className="inline-flex items-center justify-center w-6 h-6" title="Contrat non signé">
+                          <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                        </span>
+                      ) : (
+                        <Check checked={b.contractSigned} tooltip="Contrat signé" />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Check checked={b.agencyFeesPaid} onClick={() => handleToggleField(b.id, "agencyFeesPaid", !b.agencyFeesPaid)} tooltip="Fees agence" />
