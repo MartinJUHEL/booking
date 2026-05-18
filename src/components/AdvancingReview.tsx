@@ -8,6 +8,7 @@ import type { AdvancingForm, AdvancingFieldValue, SectionDef, FieldDef } from "@
 interface AdvancingAccessItem {
   id: string;
   email: string;
+  token: string;
   createdAt: string;
 }
 
@@ -90,8 +91,9 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
     }
   }
 
-  async function handleCopyLink(formId: string) {
-    const url = `${window.location.origin}/advancing/${formId}`;
+  async function handleCopyLink(formId: string, accessToken?: string) {
+    let url = `${window.location.origin}/advancing/${formId}`;
+    if (accessToken) url += `?token=${accessToken}`;
     await navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -159,12 +161,6 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
                   )}
                 </p>
               </div>
-              <button
-                onClick={() => handleCopyLink(formData.id)}
-                className="text-xs text-gray-400 hover:text-white transition-colors"
-              >
-                Copy link
-              </button>
             </div>
 
             {/* Access list */}
@@ -173,12 +169,20 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
                 {formData.accesses.map(a => (
                   <div key={a.id} className="flex items-center justify-between text-xs">
                     <span className="text-gray-300">{a.email}</span>
-                    <button
-                      onClick={() => handleRevokeAccess(a.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Revoke
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopyLink(formData.id, a.token)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        Copy link
+                      </button>
+                      <button
+                        onClick={() => handleRevokeAccess(a.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        Revoke
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

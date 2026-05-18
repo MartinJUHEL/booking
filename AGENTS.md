@@ -279,7 +279,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 ### BookingDetail Integration (`AdvancingReview` component)
 - **Advancing section** in BookingDetail panel (visible only for bookers, `role === "booker"`)
 - **Send Link**: form to enter promoter email → creates form (if first) or adds access → sends invite email + copies link to clipboard
-- **Single form per booking**: shows field counts (sent/validated), list of email accesses with revoke buttons
+- **Single form per booking**: shows field counts (sent/validated), list of email accesses with per-access "Copy link" (includes token) and revoke buttons
 - **"Review Advancing Form" button**: appears when any field has been sent (`sentFields > 0`), opens a full-width slide-in panel for field-by-field validation
 
 ### Review Panel (slide-in, `AdvancingReviewPanel`)
@@ -290,9 +290,8 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - Validated fields show green "Valide" badge + ✏️ edit button to modify the value after validation (calls `PUT /api/advancing/fields/{id}/edit`)
 
 ### Public Advancing Page (`/advancing/[formId]`)
-- **Step 1**: Email input → request verification code
-- **Step 2**: 6-digit code input → verify → get advancing JWT (stored in `localStorage`)
-- **Step 3**: Multi-section form with accordions, auto-save on blur/change (1500ms debounce, immediate save on blur). Uses `isFocusedRef` to prevent server state from overwriting local input while typing.
+- **Magic link auth**: promoter clicks link with `?token=` param → frontend exchanges token for advancing JWT via `POST /api/advancing/{formId}/auth` → JWT stored in `localStorage` → form loads automatically. No email/code input steps.
+- Multi-section form with accordions, auto-save on blur/change (1500ms debounce, immediate save on blur). Uses `isFocusedRef` to prevent server state from overwriting local input while typing.
 - **Pre-filled fields**: fields already filled by the booker at booking creation appear as validated (green badge, greyed out `opacity-60`, read-only). The promoter cannot modify or re-send them.
 - **Per-field "Send" button**: each non-validated field has a "Send" button next to it. Promoter fills a field (auto-saved as draft) then clicks "Send" to make it visible to the booker
 - **No global "Submit" button** — fields are sent individually
@@ -302,7 +301,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - **Hotel autocomplete**: the `hotelName` field uses a `hotel-search` type with autocomplete via `/api/places/search` (Google Places). Selecting a result auto-fills `hotelAddress` via `onAutoFill`
 - Section headers show sent/total counter (e.g. "3/7 sent")
 - Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker)
-- Token expiry: re-entering email + new code restores access (data persisted server-side)
+- Token expiry: if JWT expires and URL token is present, page reloads to re-authenticate automatically
 - Uses direct `fetch()` with advancing JWT (not `api-client.ts` which uses the main JWT)
 
 ## Promoter Detail Panel
