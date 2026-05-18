@@ -126,4 +126,5 @@ export interface Booking {
   commissionPercent: number | null;
   paymentTerms: string | null;
   contractFileUrl: string | null;
+  contractOriginalName: string | null;
 }

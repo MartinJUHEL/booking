@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Booking } from "./types";
 import { api } from "@/lib/api-client";
 import AdvancingReview from "./AdvancingReview";
@@ -44,6 +44,10 @@ export default function BookingDetail({
   const [error, setError] = useState(false);
   const [validating, setValidating] = useState(false);
   const [declining, setDeclining] = useState(false);
+  const [showValidateModal, setShowValidateModal] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [uploadingContract, setUploadingContract] = useState(false);
+  const contractInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -58,13 +62,58 @@ export default function BookingDetail({
     if (!booking) return;
     setValidating(true);
     try {
-      const updated = await api.post<Booking>(`/api/bookings/${booking.id}/validate`);
+      let updated: Booking;
+      if (contractFile) {
+        // Upload with contract file using FormData
+        const formData = new FormData();
+        formData.append("file", contractFile);
+        const res = await fetch(`/api/bookings/${booking.id}/validate`, {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        updated = await res.json();
+      } else {
+        updated = await api.post<Booking>(`/api/bookings/${booking.id}/validate`);
+      }
       setBooking(updated);
+      setShowValidateModal(false);
+      setContractFile(null);
       onBookingChanged?.();
     } catch (err) {
       console.error("Failed to validate proposal:", err);
     } finally {
       setValidating(false);
+    }
+  }
+
+  async function handleUploadContract() {
+    if (!booking || !contractInputRef.current?.files?.[0]) return;
+    const file = contractInputRef.current.files[0];
+    setUploadingContract(true);
+    try {
+      await api.upload(`/api/bookings/${booking.id}/contract`, file);
+      // Refresh booking
+      const updated = await api.get<Booking>(`/api/bookings/${booking.id}`);
+      setBooking(updated);
+      onBookingChanged?.();
+    } catch (err) {
+      console.error("Failed to upload contract:", err);
+    } finally {
+      setUploadingContract(false);
+      if (contractInputRef.current) contractInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteContract() {
+    if (!booking || !confirm("Supprimer le contrat ?")) return;
+    try {
+      await api.delete(`/api/bookings/${booking.id}/contract`);
+      setBooking({ ...booking, contractFileUrl: null, contractOriginalName: null });
+      onBookingChanged?.();
+    } catch (err) {
+      console.error("Failed to delete contract:", err);
     }
   }
 
@@ -152,11 +201,10 @@ export default function BookingDetail({
           {booking.status === "proposal" && role === "booker" && (
             <div className="flex gap-3">
               <button
-                onClick={handleValidate}
-                disabled={validating}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                onClick={() => setShowValidateModal(true)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                {validating ? "Validation..." : "Valider la proposition"}
+                Valider la proposition
               </button>
               <button
                 onClick={handleDecline}
@@ -165,6 +213,38 @@ export default function BookingDetail({
               >
                 {declining ? "Refus..." : "Refuser"}
               </button>
+            </div>
+          )}
+
+          {/* Validate modal */}
+          {showValidateModal && (
+            <div className="rounded-xl bg-gray-800 border border-gray-700 p-5 space-y-4">
+              <h3 className="text-sm font-semibold">Valider la proposition</h3>
+              <p className="text-xs text-gray-400">Vous pouvez joindre le contrat signe (optionnel). La proposition sera marquee comme confirmee.</p>
+              <div>
+                <label className="text-xs text-gray-500 uppercase tracking-wide block mb-2">Contrat signe (PDF, image)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-gray-600 file:text-sm file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleValidate}
+                  disabled={validating}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  {validating ? "Validation..." : contractFile ? "Valider avec contrat" : "Valider sans contrat"}
+                </button>
+                <button
+                  onClick={() => { setShowValidateModal(false); setContractFile(null); }}
+                  className="text-gray-400 hover:text-white px-4 py-2 rounded-lg text-sm transition-colors border border-gray-700"
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           )}
 
@@ -305,16 +385,43 @@ export default function BookingDetail({
           )}
 
           {/* Contract */}
-          {booking.contractFileUrl && (
-            <section className="space-y-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrat</h3>
-              <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4">
-                <a href={booking.contractFileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
-                  Voir le contrat
-                </a>
-              </div>
-            </section>
-          )}
+          <section className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrat</h3>
+            <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
+              {booking.contractFileUrl ? (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => api.downloadFile(`/api/bookings/${booking.id}/contract`, booking.contractOriginalName || "contrat")}
+                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {booking.contractOriginalName || "Telecharger le contrat"}
+                  </button>
+                  {role === "booker" && (
+                    <button
+                      onClick={handleDeleteContract}
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Supprimer
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 italic">Aucun contrat joint</p>
+              )}
+              {role === "booker" && (
+                <div className="pt-2 border-t border-gray-700">
+                  <input
+                    ref={contractInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleUploadContract}
+                    className="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border file:border-gray-600 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600"
+                  />
+                  {uploadingContract && <p className="text-xs text-gray-400 mt-1">Upload en cours...</p>}
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* Checklist */}
           <section className="space-y-2">
