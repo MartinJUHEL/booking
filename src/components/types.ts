@@ -154,9 +154,13 @@ export interface ArtistBooking {
   doorsClose: string | null;
   ageRestrictions: string | null;
   tourManager: string | null;
+  tourManagerPhone: string | null;
   technician: string | null;
+  technicianPhone: string | null;
   artistHandler: string | null;
+  artistHandlerPhone: string | null;
   stageManager: string | null;
+  stageManagerPhone: string | null;
   stageFloor: string | null;
   furtherDetails: string | null;
   soundcheckRequired: string | null;
@@ -164,24 +168,29 @@ export interface ArtistBooking {
   dinnerPickUpTime: string | null;
   dinnerMeetingPoint: string | null;
   dinnerDriver: string | null;
+  dinnerDriverPhone: string | null;
   timetable: string | null;
   // Arrival fields
   arrivalTime: string | null;
   arrivalLocation: string | null;
   arrivalMeetingPoint: string | null;
   arrivalDriver: string | null;
+  arrivalDriverPhone: string | null;
   arrivalDuration: string | null;
   // Show Transfers fields
   transferToVenuePickup: string | null;
   transferToVenueMeetingPoint: string | null;
   transferToVenueDriver: string | null;
+  transferToVenueDriverPhone: string | null;
   transferToVenueDuration: string | null;
   transferToHotelPickup: string | null;
   transferToHotelMeetingPoint: string | null;
   transferToHotelDriver: string | null;
+  transferToHotelDriverPhone: string | null;
   // Departure fields
   departurePickup: string | null;
   departureMeetingPoint: string | null;
   departureDriver: string | null;
+  departureDriverPhone: string | null;
   departureLocation: string | null;
 }
