@@ -688,7 +688,8 @@ export default function BookingForm({ booking, promoters, onSave, onClose, onPro
               <Checkbox
                 label="Contrat signé"
                 checked={form.contractSigned}
-                onChange={(v) => set("contractSigned", v)}
+                onChange={() => {}}
+                disabled
               />
               <Checkbox
                 label="Fees agence payés"
@@ -1017,17 +1018,20 @@ function Checkbox({
   label,
   checked,
   onChange,
+  disabled,
 }: {
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer select-none">
+    <label className={`flex items-center gap-2 select-none ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
         className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0"
       />
       <span className="text-sm text-gray-300">{label}</span>
