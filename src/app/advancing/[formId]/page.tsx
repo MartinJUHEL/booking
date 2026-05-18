@@ -122,14 +122,14 @@ const SECTIONS: SectionDef[] = [
   {
     key: "dinner", label: "Dinner", fields: [
       { key: "restaurant", label: "Restaurant", type: "text" },
-      { key: "pickUpTime", label: "Pick-Up Time", type: "time" },
+      { key: "pickUpTime", label: "Pick-Up Time", type: "datetime" },
       { key: "meetingPoint", label: "Meeting Point", type: "text" },
       { key: "dinnerDriver", label: "Driver (name + phone)", type: "text" },
     ],
   },
   {
     key: "arrival", label: "Arrival", fields: [
-      { key: "arrivalTime", label: "Arrival time", type: "time" },
+      { key: "arrivalTime", label: "Arrival time", type: "datetime" },
       { key: "arrivalLocation", label: "Arrival location", type: "text" },
       { key: "arrivalMeetingPoint", label: "Meeting Point", type: "text" },
       { key: "arrivalDriver", label: "Driver (name + phone)", type: "text" },
@@ -138,18 +138,18 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "showTransfers", label: "Show Transfers", fields: [
-      { key: "transferToVenuePickup", label: "Hotel→Venue pick-up time", type: "time" },
+      { key: "transferToVenuePickup", label: "Hotel→Venue pick-up time", type: "datetime" },
       { key: "transferToVenueMeetingPoint", label: "Meeting Point", type: "text" },
       { key: "transferToVenueDriver", label: "Driver (name + phone)", type: "text" },
       { key: "transferToVenueDuration", label: "Duration", type: "text" },
-      { key: "transferToHotelPickup", label: "Venue→Hotel pick-up time", type: "time" },
+      { key: "transferToHotelPickup", label: "Venue→Hotel pick-up time", type: "datetime" },
       { key: "transferToHotelMeetingPoint", label: "Meeting Point", type: "text" },
       { key: "transferToHotelDriver", label: "Driver (name + phone)", type: "text" },
     ],
   },
   {
     key: "departure", label: "Departure", fields: [
-      { key: "departurePickup", label: "Pick-up time", type: "time" },
+      { key: "departurePickup", label: "Pick-up time", type: "datetime" },
       { key: "departureMeetingPoint", label: "Meeting Point", type: "text" },
       { key: "departureDriver", label: "Driver (name + phone)", type: "text" },
       { key: "departureLocation", label: "Departure location", type: "text" },
