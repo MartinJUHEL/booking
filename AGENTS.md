@@ -286,8 +286,8 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - Progress bar showing validated/total sent fields
 - Sections as collapsible accordions with per-section progress counters
 - Only shows fields the promoter has **sent** (not drafts)
-- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking)
-- Validated fields show green "Valide" badge
+- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking), **✏️ edit button** (inline edit)
+- Validated fields show green "Valide" badge + ✏️ edit button to modify the value after validation (calls `PUT /api/advancing/fields/{id}/edit`)
 
 ### Public Advancing Page (`/advancing/[formId]`)
 - **Step 1**: Email input → request verification code
