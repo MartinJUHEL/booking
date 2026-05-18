@@ -30,6 +30,17 @@ function formatTime(timeStr: string | null) {
   return timeStr;
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return null;
+  if (value.includes("T")) {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+  }
+  return value;
+}
+
 const MODE_ICONS: Record<string, string> = {
   plane: "✈️",
   train: "🚆",
@@ -252,7 +263,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.arrivalTime && (
                 <div>
                   <span className="text-gray-400">Heure d&apos;arrivée:</span>
-                  <span className="text-white ml-2">{booking.arrivalTime}</span>
+                  <span className="text-white ml-2">{formatDateTime(booking.arrivalTime)}</span>
                 </div>
               )}
               {booking.arrivalLocation && (
@@ -339,7 +350,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.dinnerPickUpTime && (
                 <div>
                   <span className="text-gray-400">Heure:</span>
-                  <span className="text-white ml-2">{booking.dinnerPickUpTime}</span>
+                  <span className="text-white ml-2">{formatDateTime(booking.dinnerPickUpTime)}</span>
                 </div>
               )}
               {booking.dinnerMeetingPoint && (
@@ -370,7 +381,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                     {booking.transferToVenuePickup && (
                       <div>
                         <span className="text-gray-400">Départ:</span>
-                        <span className="text-white ml-2">{booking.transferToVenuePickup}</span>
+                        <span className="text-white ml-2">{formatDateTime(booking.transferToVenuePickup)}</span>
                       </div>
                     )}
                     {booking.transferToVenueMeetingPoint && (
@@ -402,7 +413,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                     {booking.transferToHotelPickup && (
                       <div>
                         <span className="text-gray-400">Départ:</span>
-                        <span className="text-white ml-2">{booking.transferToHotelPickup}</span>
+                        <span className="text-white ml-2">{formatDateTime(booking.transferToHotelPickup)}</span>
                       </div>
                     )}
                     {booking.transferToHotelMeetingPoint && (
@@ -543,7 +554,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.departurePickup && (
                 <div>
                   <span className="text-gray-400">Heure de départ:</span>
-                  <span className="text-white ml-2">{booking.departurePickup}</span>
+                  <span className="text-white ml-2">{formatDateTime(booking.departurePickup)}</span>
                 </div>
               )}
               {booking.departureMeetingPoint && (
