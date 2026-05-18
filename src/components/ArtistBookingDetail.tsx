@@ -167,6 +167,9 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
   const hasContacts = booking.tourManager || booking.technician || booking.artistHandler || booking.stageManager;
   const hasDinner = booking.restaurant || booking.dinnerPickUpTime || booking.dinnerMeetingPoint || booking.dinnerDriver;
   const hasTimeline = booking.doorsOpen || booking.doorsClose || booking.soundcheckRequired || timetable.length > 0;
+  const hasArrival = booking.arrivalTime || booking.arrivalLocation || booking.arrivalMeetingPoint || booking.arrivalDriver || booking.arrivalDuration;
+  const hasShowTransfers = booking.transferToVenuePickup || booking.transferToVenueMeetingPoint || booking.transferToVenueDriver || booking.transferToVenueDuration || booking.transferToHotelPickup || booking.transferToHotelMeetingPoint || booking.transferToHotelDriver;
+  const hasDeparture = booking.departurePickup || booking.departureMeetingPoint || booking.departureDriver || booking.departureLocation;
 
   return (
     <div className="min-h-screen bg-black text-white print:bg-white print:text-black">
@@ -242,6 +245,44 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
           </Section>
         )}
 
+        {/* Arrival */}
+        {hasArrival && (
+          <Section title="Arrivée" icon="📍">
+            <div className="space-y-2 text-sm">
+              {booking.arrivalTime && (
+                <div>
+                  <span className="text-gray-400">Heure d&apos;arrivée:</span>
+                  <span className="text-white ml-2">{booking.arrivalTime}</span>
+                </div>
+              )}
+              {booking.arrivalLocation && (
+                <div>
+                  <span className="text-gray-400">Lieu d&apos;arrivée:</span>
+                  <span className="text-white ml-2">{booking.arrivalLocation}</span>
+                </div>
+              )}
+              {booking.arrivalMeetingPoint && (
+                <div>
+                  <span className="text-gray-400">Point de rencontre:</span>
+                  <span className="text-white ml-2">{booking.arrivalMeetingPoint}</span>
+                </div>
+              )}
+              {booking.arrivalDriver && (
+                <div>
+                  <span className="text-gray-400">Driver:</span>
+                  <span className="text-white ml-2">{booking.arrivalDriver}</span>
+                </div>
+              )}
+              {booking.arrivalDuration && (
+                <div>
+                  <span className="text-gray-400">Durée:</span>
+                  <span className="text-white ml-2">{booking.arrivalDuration}</span>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
         {/* Hotel */}
         {booking.hotel.booked && (
           <Section title="Hôtel" icon="🏨">
@@ -311,6 +352,72 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Driver:</span>
                   <span className="text-white ml-2">{booking.dinnerDriver}</span>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {/* Show Transfers */}
+        {hasShowTransfers && (
+          <Section title="Transferts" icon="🚗">
+            <div className="space-y-4 text-sm">
+              {/* Hotel → Venue */}
+              {(booking.transferToVenuePickup || booking.transferToVenueMeetingPoint || booking.transferToVenueDriver || booking.transferToVenueDuration) && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Hôtel → Venue</h3>
+                  <div className="space-y-1">
+                    {booking.transferToVenuePickup && (
+                      <div>
+                        <span className="text-gray-400">Départ:</span>
+                        <span className="text-white ml-2">{booking.transferToVenuePickup}</span>
+                      </div>
+                    )}
+                    {booking.transferToVenueMeetingPoint && (
+                      <div>
+                        <span className="text-gray-400">Point de rencontre:</span>
+                        <span className="text-white ml-2">{booking.transferToVenueMeetingPoint}</span>
+                      </div>
+                    )}
+                    {booking.transferToVenueDriver && (
+                      <div>
+                        <span className="text-gray-400">Driver:</span>
+                        <span className="text-white ml-2">{booking.transferToVenueDriver}</span>
+                      </div>
+                    )}
+                    {booking.transferToVenueDuration && (
+                      <div>
+                        <span className="text-gray-400">Durée:</span>
+                        <span className="text-white ml-2">{booking.transferToVenueDuration}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Venue → Hotel */}
+              {(booking.transferToHotelPickup || booking.transferToHotelMeetingPoint || booking.transferToHotelDriver) && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Venue → Hôtel</h3>
+                  <div className="space-y-1">
+                    {booking.transferToHotelPickup && (
+                      <div>
+                        <span className="text-gray-400">Départ:</span>
+                        <span className="text-white ml-2">{booking.transferToHotelPickup}</span>
+                      </div>
+                    )}
+                    {booking.transferToHotelMeetingPoint && (
+                      <div>
+                        <span className="text-gray-400">Point de rencontre:</span>
+                        <span className="text-white ml-2">{booking.transferToHotelMeetingPoint}</span>
+                      </div>
+                    )}
+                    {booking.transferToHotelDriver && (
+                      <div>
+                        <span className="text-gray-400">Driver:</span>
+                        <span className="text-white ml-2">{booking.transferToHotelDriver}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -423,6 +530,38 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Stage Manager</span>
                   <p className="text-white">{booking.stageManager}</p>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {/* Departure */}
+        {hasDeparture && (
+          <Section title="Départ" icon="🚪">
+            <div className="space-y-2 text-sm">
+              {booking.departurePickup && (
+                <div>
+                  <span className="text-gray-400">Heure de départ:</span>
+                  <span className="text-white ml-2">{booking.departurePickup}</span>
+                </div>
+              )}
+              {booking.departureMeetingPoint && (
+                <div>
+                  <span className="text-gray-400">Point de rencontre:</span>
+                  <span className="text-white ml-2">{booking.departureMeetingPoint}</span>
+                </div>
+              )}
+              {booking.departureDriver && (
+                <div>
+                  <span className="text-gray-400">Driver:</span>
+                  <span className="text-white ml-2">{booking.departureDriver}</span>
+                </div>
+              )}
+              {booking.departureLocation && (
+                <div>
+                  <span className="text-gray-400">Lieu de départ:</span>
+                  <span className="text-white ml-2">{booking.departureLocation}</span>
                 </div>
               )}
             </div>

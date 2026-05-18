@@ -165,4 +165,23 @@ export interface ArtistBooking {
   dinnerMeetingPoint: string | null;
   dinnerDriver: string | null;
   timetable: string | null;
+  // Arrival fields
+  arrivalTime: string | null;
+  arrivalLocation: string | null;
+  arrivalMeetingPoint: string | null;
+  arrivalDriver: string | null;
+  arrivalDuration: string | null;
+  // Show Transfers fields
+  transferToVenuePickup: string | null;
+  transferToVenueMeetingPoint: string | null;
+  transferToVenueDriver: string | null;
+  transferToVenueDuration: string | null;
+  transferToHotelPickup: string | null;
+  transferToHotelMeetingPoint: string | null;
+  transferToHotelDriver: string | null;
+  // Departure fields
+  departurePickup: string | null;
+  departureMeetingPoint: string | null;
+  departureDriver: string | null;
+  departureLocation: string | null;
 }
