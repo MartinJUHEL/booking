@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { Booking } from "./types";
 import { api } from "@/lib/api-client";
 import AdvancingReview from "./AdvancingReview";
@@ -46,8 +46,6 @@ export default function BookingDetail({
   const [declining, setDeclining] = useState(false);
   const [showValidateModal, setShowValidateModal] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
-  const [uploadingContract, setUploadingContract] = useState(false);
-  const contractInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -85,35 +83,6 @@ export default function BookingDetail({
       console.error("Failed to validate proposal:", err);
     } finally {
       setValidating(false);
-    }
-  }
-
-  async function handleUploadContract() {
-    if (!booking || !contractInputRef.current?.files?.[0]) return;
-    const file = contractInputRef.current.files[0];
-    setUploadingContract(true);
-    try {
-      await api.upload(`/api/bookings/${booking.id}/contract`, file);
-      // Refresh booking
-      const updated = await api.get<Booking>(`/api/bookings/${booking.id}`);
-      setBooking(updated);
-      onBookingChanged?.();
-    } catch (err) {
-      console.error("Failed to upload contract:", err);
-    } finally {
-      setUploadingContract(false);
-      if (contractInputRef.current) contractInputRef.current.value = "";
-    }
-  }
-
-  async function handleDeleteContract() {
-    if (!booking || !confirm("Supprimer le contrat ?")) return;
-    try {
-      await api.delete(`/api/bookings/${booking.id}/contract`);
-      setBooking({ ...booking, contractFileUrl: null, contractOriginalName: null });
-      onBookingChanged?.();
-    } catch (err) {
-      console.error("Failed to delete contract:", err);
     }
   }
 
@@ -387,38 +356,16 @@ export default function BookingDetail({
           {/* Contract */}
           <section className="space-y-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contrat</h3>
-            <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-3">
+            <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4">
               {booking.contractFileUrl ? (
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => api.downloadFile(`/api/bookings/${booking.id}/contract`, booking.contractOriginalName || "contrat")}
-                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    {booking.contractOriginalName || "Telecharger le contrat"}
-                  </button>
-                  {role === "booker" && (
-                    <button
-                      onClick={handleDeleteContract}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Supprimer
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => api.downloadFile(`/api/bookings/${booking.id}/contract`, booking.contractOriginalName || "contrat")}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  {booking.contractOriginalName || "Télécharger le contrat"}
+                </button>
               ) : (
                 <p className="text-sm text-gray-500 italic">Aucun contrat joint</p>
-              )}
-              {role === "booker" && (
-                <div className="pt-2 border-t border-gray-700">
-                  <input
-                    ref={contractInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={handleUploadContract}
-                    className="w-full text-xs text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border file:border-gray-600 file:text-xs file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600"
-                  />
-                  {uploadingContract && <p className="text-xs text-gray-400 mt-1">Upload en cours...</p>}
-                </div>
               )}
             </div>
           </section>
