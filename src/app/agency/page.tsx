@@ -45,6 +45,7 @@ interface Artist {
   image: string | null;
   artistName: string | null;
   presskitUrl: string | null;
+  assignedBookerIds: string[];
 }
 
 type Tab = "artistes" | "bookers" | "infos";
@@ -111,7 +112,7 @@ export default function AgencyPage() {
           api.get<Agency>("/api/agency"),
           api.get<Member[]>("/api/agency/members"),
           api.get<Invitation[]>("/api/agency/invitations"),
-          api.get<Artist[]>("/api/artists"),
+          api.get<Artist[]>("/api/artists/with-bookers"),
         ]);
         setAgency(agencyData);
         setMembers(membersData);
@@ -173,7 +174,7 @@ export default function AgencyPage() {
       await api.post("/api/artists", { email: artistEmail.trim() });
       setArtistMessage(`Invitation envoyee a ${artistEmail}.`);
       setArtistEmail("");
-      const artistsData = await api.get<Artist[]>("/api/artists");
+      const artistsData = await api.get<Artist[]>("/api/artists/with-bookers");
       setArtists(artistsData);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur lors de l'envoi";
@@ -296,6 +297,22 @@ export default function AgencyPage() {
       setCopiedPresskitId(artistId);
       setTimeout(() => setCopiedPresskitId(null), 2000);
     });
+  }
+
+  async function handleToggleBooker(artistId: string, bookerId: string, currentBookerIds: string[]) {
+    const newBookerIds = currentBookerIds.includes(bookerId)
+      ? currentBookerIds.filter((id) => id !== bookerId)
+      : [...currentBookerIds, bookerId];
+
+    try {
+      await api.put(`/api/artists/${artistId}/bookers`, { bookerIds: newBookerIds });
+      setArtists((prev) =>
+        prev.map((a) => (a.id === artistId ? { ...a, assignedBookerIds: newBookerIds } : a))
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur";
+      alert(message);
+    }
   }
 
   if (loading || !user || user.role !== "booker" || !user.agencyId) {
@@ -506,6 +523,30 @@ export default function AgencyPage() {
                               )}
                             </div>
                           )}
+                        </div>
+
+                        {/* Booker assignment */}
+                        <div className="mt-2 pl-11">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-gray-500">Bookers :</span>
+                            {artist.assignedBookerIds.length === 0 ? (
+                              <span className="text-xs text-gray-600 italic">Tous</span>
+                            ) : null}
+                            {members.map((member) => (
+                              <button
+                                key={member.id}
+                                onClick={() => handleToggleBooker(artist.id, member.id, artist.assignedBookerIds)}
+                                className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                                  artist.assignedBookerIds.includes(member.id)
+                                    ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
+                                    : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-400"
+                                }`}
+                                title={artist.assignedBookerIds.includes(member.id) ? "Retirer" : "Assigner"}
+                              >
+                                {member.name || member.email.split("@")[0]}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     ))}
