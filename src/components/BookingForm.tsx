@@ -27,7 +27,10 @@ function emptyLeg(): TransportLeg {
 }
 
 function initTransports(transports?: Transport[]): Transport[] {
-  if (transports && transports.length > 0) return transports.map(t => ({ ...t, legs: t.legs.length > 0 ? t.legs : [emptyLeg()] }));
+  if (transports && transports.length > 0) {
+    const sorted = [...transports].sort((a, b) => a.type === "outbound" ? -1 : b.type === "outbound" ? 1 : 0);
+    return sorted.map(t => ({ ...t, legs: t.legs.length > 0 ? t.legs : [emptyLeg()] }));
+  }
   return [
     { type: "outbound" as const, booked: false, legs: [emptyLeg()] },
     { type: "return" as const, booked: false, legs: [emptyLeg()] },
