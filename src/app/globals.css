@@ -40,3 +40,33 @@ input[type="time"] {
 .animate-slide-in {
   animation: slide-in 0.2s ease-out;
 }
+
+/* Print styles for artist booking detail / feuille de route */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:bg-white {
+    background: white !important;
+  }
+
+  .print\:text-black {
+    color: black !important;
+  }
+
+  .print\:border-gray-300 {
+    border-color: #d1d5db !important;
+  }
+
+  .print\:static {
+    position: static !important;
+  }
+}

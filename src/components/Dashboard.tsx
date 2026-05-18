@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import BookingTable from "./BookingTable";
-import BookingDetail from "./BookingDetail";
 import CalendarView from "./CalendarView";
 import type { BookingListItem } from "./types";
 
@@ -13,9 +13,9 @@ export default function Dashboard({
 }: {
   initialBookings: BookingListItem[];
 }) {
+  const router = useRouter();
   const [bookings] = useState<BookingListItem[]>(initialBookings);
   const [view, setView] = useState<ViewMode>("table");
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -112,20 +112,11 @@ export default function Dashboard({
       {view === "table" ? (
         <BookingTable
           bookings={filtered}
-          onSelect={(b) => setSelectedBookingId(b.id)}
+          onSelect={(b) => router.push(`/booking/${b.id}`)}
           readOnly
         />
       ) : (
-        <CalendarView bookings={filtered} onSelect={(b) => setSelectedBookingId(b.id)} />
-      )}
-
-      {/* Booking Detail Panel (read-only) */}
-      {selectedBookingId && (
-        <BookingDetail
-          bookingId={selectedBookingId}
-          onClose={() => setSelectedBookingId(null)}
-          role="artist"
-        />
+        <CalendarView bookings={filtered} onSelect={(b) => router.push(`/booking/${b.id}`)} />
       )}
     </div>
   );

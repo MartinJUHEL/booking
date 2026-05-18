@@ -154,6 +154,11 @@ const SECTIONS: SectionDef[] = [
       { key: "departureLocation", label: "Departure location", type: "text" },
     ],
   },
+  {
+    key: "timetable", label: "Timetable / Running Order", fields: [
+      { key: "timetable", label: "Timetable", type: "textarea", placeholder: "JSON format: [{\"artist\":\"DJ Name\",\"startTime\":\"22:00\",\"endTime\":\"00:00\"}]" },
+    ],
+  },
 ];
 
 export { SECTIONS };

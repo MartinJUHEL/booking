@@ -127,4 +127,23 @@ export interface Booking {
   paymentTerms: string | null;
   contractFileUrl: string | null;
   contractOriginalName: string | null;
+  // Advancing fields
+  eventName: string | null;
+  eventWebsite: string | null;
+  capacity: number | null;
+  doorsOpen: string | null;
+  doorsClose: string | null;
+  ageRestrictions: string | null;
+  tourManager: string | null;
+  technician: string | null;
+  artistHandler: string | null;
+  stageManager: string | null;
+  stageFloor: string | null;
+  furtherDetails: string | null;
+  soundcheckRequired: string | null;
+  restaurant: string | null;
+  dinnerPickUpTime: string | null;
+  dinnerMeetingPoint: string | null;
+  dinnerDriver: string | null;
+  timetable: string | null;
 }
