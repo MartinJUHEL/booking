@@ -453,6 +453,11 @@ function ReviewField({
     displayValue = fieldValue.value!;
     if (field.type === "boolean") {
       displayValue = fieldValue.value === "true" ? "Yes" : "No";
+    } else if (field.type === "datetime") {
+      const d = new Date(fieldValue.value!);
+      if (!isNaN(d.getTime())) {
+        displayValue = d.toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      }
     }
   }
 
@@ -484,7 +489,7 @@ function ReviewField({
               />
             ) : (
               <input
-                type={field.type === "number" ? "number" : field.type === "time" ? "time" : field.type === "date" ? "date" : "text"}
+                type={field.type === "number" ? "number" : field.type === "time" ? "time" : field.type === "date" ? "date" : field.type === "datetime" ? "datetime-local" : "text"}
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
                 className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-purple-500"
