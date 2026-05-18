@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
-import BookingDetail from "./BookingDetail";
 import BookingForm from "./BookingForm";
 import CalendarView from "./CalendarView";
 import type { Booking, DashboardBookingItem, DashboardResponse, Promoter } from "./types";
@@ -136,6 +136,7 @@ function StatCard({ label, value, alert, icon }: { label: string; value: string 
 }
 
 export default function BookerDashboard({ artists }: { artists: Artist[] }) {
+  const router = useRouter();
   const [bookings, setBookings] = useState<DashboardBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -143,7 +144,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
   const [artistFilter, setArtistFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("table");
 
   // Sorting
@@ -264,7 +264,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
     try {
       await api.delete(`/api/bookings/${id}`);
       setBookings((prev) => prev.filter((b) => b.id !== id));
-      if (selectedBookingId === id) setSelectedBookingId(null);
     } catch (err) {
       console.error("Failed to delete booking:", err);
     }
@@ -291,15 +290,13 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       setBookings((prev) =>
         prev.map((b) => (b.id === updated.id ? { ...b, ...updated } : b))
       );
-      setSelectedBookingId(null);
-      setTimeout(() => setSelectedBookingId(updated.id), 0);
     } else {
       const artistId = createForArtistId;
       if (!artistId) return;
       const payload = { ...data, artistId };
       const created = await api.post<Booking>("/api/bookings", payload);
       fetchBookings();
-      setSelectedBookingId(created.id);
+      router.push(`/bookings/${created.id}`);
     }
     setShowForm(false);
     setEditingBooking(null);
@@ -469,7 +466,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
       ) : view === "calendar" ? (
         <CalendarView
           bookings={filteredBookings}
-          onSelect={(b) => setSelectedBookingId(b.id)}
+          onSelect={(b) => router.push(`/bookings/${b.id}`)}
           renderLabel={(b) => `${b.artistName} - ${b.venue}`}
         />
       ) : filteredBookings.length === 0 ? (
@@ -539,7 +536,7 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
                 return (
                   <tr
                     key={b.id}
-                    onClick={() => setSelectedBookingId(b.id)}
+                    onClick={() => router.push(`/bookings/${b.id}`)}
                     className={`transition-colors cursor-pointer ${
                       isPast ? "opacity-50" : ""
                     } ${index % 2 === 0 ? "bg-gray-950" : "bg-gray-900/30"} hover:bg-gray-800/50`}
@@ -606,20 +603,6 @@ export default function BookerDashboard({ artists }: { artists: Artist[] }) {
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Booking Detail Panel */}
-      {selectedBookingId && (
-        <BookingDetail
-          bookingId={selectedBookingId}
-          onClose={() => setSelectedBookingId(null)}
-          onEdit={(b) => {
-            setSelectedBookingId(null);
-            handleEdit(b);
-          }}
-          onBookingChanged={fetchBookings}
-          role="booker"
-        />
       )}
 
       {/* Booking Form Modal */}
