@@ -46,6 +46,8 @@ export default function BookingDetail({
   const [declining, setDeclining] = useState(false);
   const [showValidateModal, setShowValidateModal] = useState(false);
   const [contractFile, setContractFile] = useState<File | null>(null);
+  const [sendingRoadsheet, setSendingRoadsheet] = useState(false);
+  const [roadsheetSent, setRoadsheetSent] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -508,6 +510,21 @@ export default function BookingDetail({
           {/* Advancing (booker only) */}
           {role === "booker" && (
             <section className="space-y-2">
+              <button
+                onClick={async () => {
+                  setSendingRoadsheet(true);
+                  try {
+                    await api.post(`/api/bookings/${booking.id}/send-roadsheet`, {});
+                    setRoadsheetSent(true);
+                    setTimeout(() => setRoadsheetSent(false), 3000);
+                  } catch { alert("Erreur lors de l'envoi"); }
+                  finally { setSendingRoadsheet(false); }
+                }}
+                disabled={sendingRoadsheet}
+                className="w-full text-sm bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {roadsheetSent ? "Feuille de route envoyée !" : sendingRoadsheet ? "Envoi..." : "Envoyer feuille de route à l'artiste"}
+              </button>
               <AdvancingReview bookingId={booking.id} />
             </section>
           )}

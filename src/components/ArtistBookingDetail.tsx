@@ -124,6 +124,8 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
   const { user } = useAuth();
   const [booking, setBooking] = useState<ArtistBooking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -137,6 +139,19 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
       router.push("/");
     });
   }, [bookingId, user, router]);
+
+  const handleSendRoadsheet = async () => {
+    setSending(true);
+    try {
+      await api.post(`/api/bookings/${bookingId}/send-roadsheet`, {});
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
+    } catch {
+      alert("Erreur lors de l'envoi");
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (loading || !booking) {
     return (
@@ -167,10 +182,11 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
           <div className="flex items-center gap-3">
             <StatusBadge status={booking.status} />
             <button
-              onClick={() => window.print()}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition-colors print:hidden"
+              onClick={handleSendRoadsheet}
+              disabled={sending}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed print:hidden"
             >
-              Exporter PDF
+              {sent ? "Envoyé !" : sending ? "Envoi..." : "Envoyer par email"}
             </button>
           </div>
         </div>
