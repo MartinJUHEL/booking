@@ -68,6 +68,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. **Contract section**: for confirmed bookings, upload/download/delete contract (below Notes). |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields and validate/decline actions. Validate opens inline panel with optional contract upload. Contract section: download-only (upload/delete is in BookingForm). |
+| `src/components/ArtistBookingDetail.tsx` | Full-screen artist booking detail page (read-only). Shows event info, timetable (artist's slot highlighted in purple), hotel, transport, notes. "Envoyer par email" button sends feuille de route PDF via API. Sections with no data are hidden. |
+| `src/components/BookerBookingPage.tsx` | Full-screen booker booking detail page with detail/edit toggle. Shows all booking info + "Envoyer feuille de route à l'artiste" button. Edit mode embeds BookingForm inline. Single route `/bookings/[id]`. |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
@@ -76,8 +78,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
 | `next.config.ts` | Next.js config with API rewrites proxy to backend |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
+| `src/app/booking/[id]/page.tsx` | Artist booking detail page (full-screen, read-only). Fetches `ArtistBooking` from `GET /api/bookings/{id}` (artist role returns `ArtistBookingDto`). |
+| `src/app/bookings/[id]/page.tsx` | Booker booking detail page (full-screen, detail/edit toggle). Fetches full `Booking` from `GET /api/bookings/{id}`. |
 | `src/app/invitations/[token]/page.tsx` | Booker invitation accept/reject page (artist clicks email link, authenticates, accepts or rejects) |
-| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter). Promoter uses `agencyId` (not `userId`). |
+| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, ArtistBooking, Hotel, Transport, TransportLeg, Promoter, TimetableEntry). Promoter uses `agencyId` (not `userId`). `Booking` is for bookers (full detail), `ArtistBooking` is for artists (read-only, excludes commission/payment terms). |
 
 ## Data Model (TypeScript)
 
@@ -104,7 +108,19 @@ interface BookingListItem {
 ```
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
-The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`, `contractOriginalName`.
+The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, `timetable: TimetableEntry[]`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`, `contractOriginalName`.
+
+### ArtistBooking (artist-facing detail, fetched via `GET /api/bookings/{id}` as artist)
+Read-only DTO excluding booker-internal fields (commission, payment terms). Includes: event info, venue, hotel, transports, timetable, notes, promoter name/email/phone.
+
+### TimetableEntry
+```ts
+interface TimetableEntry {
+  artist: string;
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+}
+```
 
 ### DashboardBookingItem (booker dashboard, extends BookingListItem)
 Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
@@ -180,6 +196,29 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **No access to Google Calendar settings** — the "Configuration" link is hidden, `/settings` redirects bookers to `/`.
 - **Top bar navigation** (booker): Booking | Agence | Promoteurs — each with icon, active tab underlined in purple
 - `/onboarding` page: step 1 = role selection, step 2 = agency creation (bookers without an agency are redirected back here; joining is only via invitation link)
+
+## Booking Detail Pages (Full-Screen)
+
+Both roles have dedicated full-screen detail pages (replacing side panels for navigation from dashboards):
+
+### Artist Detail Page (`/booking/[id]`)
+- **Read-only** — no edit capabilities
+- Shows: event info, timetable (artist's slot highlighted in purple with arrow marker), hotel, transport, notes
+- Sections with no data are hidden entirely
+- "Envoyer par email" button sends the feuille de route PDF to the artist's email via `POST /api/bookings/{id}/send-roadsheet`
+
+### Booker Detail Page (`/bookings/[id]`)
+- **Detail/edit toggle** — single page with "Modifier" button to switch to edit mode (embeds `BookingForm`)
+- Shows all booking info including timetable, advancing status
+- "Envoyer feuille de route à l'artiste" button sends roadsheet PDF to the artist
+- Back button returns to dashboard
+
+### Feuille de Route (Roadsheet)
+- Server-side PDF generated by `RoadsheetPdfService` (QuestPDF)
+- Sent as email attachment via Resend (base64-encoded)
+- Endpoint: `POST /api/bookings/{id}/send-roadsheet`
+- Both artist and booker can trigger it
+- PDF includes: event info, venue, timetable, hotel, transport details
 
 ## Booking List/Detail Pattern
 
