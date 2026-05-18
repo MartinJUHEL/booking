@@ -41,6 +41,15 @@ function formatDateTime(value: string | null) {
   return value;
 }
 
+function MapLink({ children, className }: { children: string; className?: string }) {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(children)}`;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className={`text-purple-400 hover:text-purple-300 hover:underline transition-colors ${className || ""}`}>
+      {children} ↗
+    </a>
+  );
+}
+
 const MODE_ICONS: Record<string, string> = {
   plane: "✈️",
   train: "🚆",
@@ -105,12 +114,12 @@ function TransportLegCard({ leg }: { leg: TransportLeg }) {
           {formatTime(leg.departureTime) && (
             <span>{formatTime(leg.departureTime)}</span>
           )}
-          {leg.departureLocation && <span className="text-gray-400">{leg.departureLocation}</span>}
+          {leg.departureLocation && <MapLink className="text-sm">{leg.departureLocation}</MapLink>}
           <span className="text-gray-600">→</span>
           {formatTime(leg.arrivalTime) && (
             <span>{formatTime(leg.arrivalTime)}</span>
           )}
-          {leg.arrivalLocation && <span className="text-gray-400">{leg.arrivalLocation}</span>}
+          {leg.arrivalLocation && <MapLink className="text-sm">{leg.arrivalLocation}</MapLink>}
         </div>
         <div className="text-xs text-gray-500 mt-1 space-x-3">
           {leg.carrier && <span>{leg.carrier}</span>}
@@ -217,7 +226,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
             </div>
             <div>
               <span className="text-gray-400">Venue</span>
-              <p className="text-white font-medium">{booking.venue}</p>
+              <p className="text-white font-medium"><MapLink>{booking.venue}</MapLink></p>
               {booking.venueAddress && <p className="text-gray-500 text-xs">{booking.venueAddress}</p>}
               {booking.venueWebsite && (
                 <a href={booking.venueWebsite} target="_blank" rel="noopener noreferrer" className="text-purple-400 text-xs hover:underline">
@@ -269,13 +278,13 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.arrivalLocation && (
                 <div>
                   <span className="text-gray-400">Lieu d&apos;arrivée:</span>
-                  <span className="text-white ml-2">{booking.arrivalLocation}</span>
+                  <span className="ml-2"><MapLink>{booking.arrivalLocation}</MapLink></span>
                 </div>
               )}
               {booking.arrivalMeetingPoint && (
                 <div>
                   <span className="text-gray-400">Point de rencontre:</span>
-                  <span className="text-white ml-2">{booking.arrivalMeetingPoint}</span>
+                  <span className="ml-2"><MapLink>{booking.arrivalMeetingPoint}</MapLink></span>
                 </div>
               )}
               {booking.arrivalDriver && (
@@ -298,18 +307,10 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
         {booking.hotel.booked && (
           <Section title="Hôtel" icon="🏨">
             <div className="space-y-2 text-sm">
-              {booking.hotel.name && <p className="text-white font-medium text-base">{booking.hotel.name}</p>}
+              {booking.hotel.name && <p className="text-base font-medium"><MapLink>{booking.hotel.name}</MapLink></p>}
               {booking.hotel.address && (
                 <div>
                   <p className="text-gray-400">{booking.hotel.address}</p>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.hotel.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-400 text-xs hover:underline"
-                  >
-                    📍 Voir sur Google Maps
-                  </a>
                 </div>
               )}
               {booking.hotel.checkIn && (
@@ -344,7 +345,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.restaurant && (
                 <div>
                   <span className="text-gray-400">Restaurant:</span>
-                  <span className="text-white ml-2 font-medium">{booking.restaurant}</span>
+                  <span className="ml-2 font-medium"><MapLink>{booking.restaurant}</MapLink></span>
                 </div>
               )}
               {booking.dinnerPickUpTime && (
@@ -356,7 +357,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.dinnerMeetingPoint && (
                 <div>
                   <span className="text-gray-400">Point de rencontre:</span>
-                  <span className="text-white ml-2">{booking.dinnerMeetingPoint}</span>
+                  <span className="ml-2"><MapLink>{booking.dinnerMeetingPoint}</MapLink></span>
                 </div>
               )}
               {booking.dinnerDriver && (
@@ -387,7 +388,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                     {booking.transferToVenueMeetingPoint && (
                       <div>
                         <span className="text-gray-400">Point de rencontre:</span>
-                        <span className="text-white ml-2">{booking.transferToVenueMeetingPoint}</span>
+                        <span className="ml-2"><MapLink>{booking.transferToVenueMeetingPoint}</MapLink></span>
                       </div>
                     )}
                     {booking.transferToVenueDriver && (
@@ -419,7 +420,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                     {booking.transferToHotelMeetingPoint && (
                       <div>
                         <span className="text-gray-400">Point de rencontre:</span>
-                        <span className="text-white ml-2">{booking.transferToHotelMeetingPoint}</span>
+                        <span className="ml-2"><MapLink>{booking.transferToHotelMeetingPoint}</MapLink></span>
                       </div>
                     )}
                     {booking.transferToHotelDriver && (
@@ -560,7 +561,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.departureMeetingPoint && (
                 <div>
                   <span className="text-gray-400">Point de rencontre:</span>
-                  <span className="text-white ml-2">{booking.departureMeetingPoint}</span>
+                  <span className="ml-2"><MapLink>{booking.departureMeetingPoint}</MapLink></span>
                 </div>
               )}
               {booking.departureDriver && (
@@ -572,7 +573,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
               {booking.departureLocation && (
                 <div>
                   <span className="text-gray-400">Lieu de départ:</span>
-                  <span className="text-white ml-2">{booking.departureLocation}</span>
+                  <span className="ml-2"><MapLink>{booking.departureLocation}</MapLink></span>
                 </div>
               )}
             </div>
