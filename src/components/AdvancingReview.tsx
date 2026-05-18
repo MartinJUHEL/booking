@@ -243,6 +243,22 @@ function AdvancingReviewPanel({
     }
    }
 
+  async function handleEdit(fieldValue: AdvancingFieldValue, newValue: string) {
+    setValidatingId(fieldValue.id);
+    try {
+      const updated = await api.put<AdvancingFieldValue>(`/api/advancing/fields/${fieldValue.id}/edit`, { value: newValue });
+      setLocalForm(prev => ({
+        ...prev,
+        fieldValues: prev.fieldValues.map(fv => fv.id === fieldValue.id ? updated : fv),
+      }));
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingId(null);
+    }
+  }
+
   const getFieldValue = (section: string, key: string): AdvancingFieldValue | undefined => {
     return localForm.fieldValues.find(fv => fv.section === section && fv.fieldKey === key);
   };
@@ -295,6 +311,7 @@ function AdvancingReviewPanel({
               getFieldValue={getFieldValue}
               validatingId={validatingId}
               onValidate={handleValidate}
+              onEdit={handleEdit}
             />
           ))}
         </div>
@@ -308,11 +325,13 @@ function ReviewSection({
   getFieldValue,
   validatingId,
   onValidate,
+  onEdit,
 }: {
   section: SectionDef;
   getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
   validatingId: string | null;
   onValidate: (fv: AdvancingFieldValue) => void;
+  onEdit: (fv: AdvancingFieldValue, newValue: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -340,6 +359,7 @@ function ReviewSection({
                 fieldValue={fv}
                 validating={fv ? validatingId === fv.id : false}
                 onValidate={fv ? () => onValidate(fv) : undefined}
+                onEdit={fv ? (newValue: string) => onEdit(fv, newValue) : undefined}
               />
             );
           })}
@@ -376,12 +396,16 @@ function ReviewField({
   fieldValue,
   validating,
   onValidate,
+  onEdit,
 }: {
   field: FieldDef;
   fieldValue: AdvancingFieldValue | undefined;
   validating: boolean;
   onValidate?: () => void;
+  onEdit?: (newValue: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
   const isFilled = fieldValue && fieldValue.value;
   const isValidated = !!fieldValue?.validatedAt;
 
@@ -394,32 +418,97 @@ function ReviewField({
     }
   }
 
+  function startEdit() {
+    setEditValue(fieldValue?.value || "");
+    setEditing(true);
+  }
+
+  function submitEdit() {
+    if (onEdit) {
+      onEdit(editValue);
+    }
+    setEditing(false);
+  }
+
   return (
     <div className={`px-5 py-3 flex items-center gap-3 ${isValidated ? "bg-green-500/5" : !isFilled ? "opacity-40" : ""}`}>
       {/* Label + value */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gray-500">{field.label}</p>
-        <p className={`text-sm break-words ${isFilled ? "text-gray-200" : "text-gray-600 italic"}`}>
-          {isFilled ? displayValue : "Non renseigné"}
-        </p>
+        {editing ? (
+          <div className="flex items-center gap-2 mt-1">
+            {field.type === "textarea" ? (
+              <textarea
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-purple-500"
+                rows={2}
+              />
+            ) : (
+              <input
+                type={field.type === "number" ? "number" : field.type === "time" ? "time" : field.type === "date" ? "date" : "text"}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-purple-500"
+              />
+            )}
+            <button
+              onClick={submitEdit}
+              disabled={validating}
+              className="text-xs text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 px-2 py-1.5 rounded font-medium transition-colors"
+            >
+              {validating ? "..." : "OK"}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="text-xs text-gray-400 hover:text-white px-2 py-1.5"
+            >
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <p className={`text-sm break-words ${isFilled ? "text-gray-200" : "text-gray-600 italic"}`}>
+            {isFilled ? displayValue : "Non renseigné"}
+          </p>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {isValidated ? (
-          <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
-            Valide
-          </span>
-        ) : isFilled && onValidate ? (
-          <button
-            onClick={onValidate}
-            disabled={validating}
-            className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
-          >
-            {validating ? "..." : "Valider"}
-          </button>
-        ) : null}
-      </div>
+      {!editing && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isValidated ? (
+            <>
+              <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
+                Valide
+              </span>
+              <button
+                onClick={startEdit}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                title="Modifier"
+              >
+                ✏️
+              </button>
+            </>
+          ) : isFilled && onValidate ? (
+            <>
+              <button
+                onClick={onValidate}
+                disabled={validating}
+                className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
+              >
+                {validating ? "..." : "Valider"}
+              </button>
+              <button
+                onClick={startEdit}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                title="Modifier"
+              >
+                ✏️
+              </button>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
