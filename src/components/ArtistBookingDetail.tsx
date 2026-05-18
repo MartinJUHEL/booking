@@ -50,6 +50,29 @@ function MapLink({ children, className }: { children: string; className?: string
   );
 }
 
+function PhoneLink({ phone }: { phone: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(phone);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <a href={`tel:${phone}`} className="text-purple-400 hover:text-purple-300 hover:underline transition-colors">
+        {phone}
+      </a>
+      <button onClick={handleCopy} className="text-gray-500 hover:text-white transition-colors" title="Copier">
+        {copied ? (
+          <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+        )}
+      </button>
+    </span>
+  );
+}
+
 const MODE_ICONS: Record<string, string> = {
   plane: "✈️",
   train: "🚆",
@@ -291,6 +314,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Driver:</span>
                   <span className="text-white ml-2">{booking.arrivalDriver}</span>
+                  {booking.arrivalDriverPhone && <span className="ml-2"><PhoneLink phone={booking.arrivalDriverPhone} /></span>}
                 </div>
               )}
               {booking.arrivalDuration && (
@@ -364,6 +388,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Driver:</span>
                   <span className="text-white ml-2">{booking.dinnerDriver}</span>
+                  {booking.dinnerDriverPhone && <span className="ml-2"><PhoneLink phone={booking.dinnerDriverPhone} /></span>}
                 </div>
               )}
             </div>
@@ -395,6 +420,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                       <div>
                         <span className="text-gray-400">Driver:</span>
                         <span className="text-white ml-2">{booking.transferToVenueDriver}</span>
+                        {booking.transferToVenueDriverPhone && <span className="ml-2"><PhoneLink phone={booking.transferToVenueDriverPhone} /></span>}
                       </div>
                     )}
                     {booking.transferToVenueDuration && (
@@ -427,6 +453,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                       <div>
                         <span className="text-gray-400">Driver:</span>
                         <span className="text-white ml-2">{booking.transferToHotelDriver}</span>
+                        {booking.transferToHotelDriverPhone && <span className="ml-2"><PhoneLink phone={booking.transferToHotelDriverPhone} /></span>}
                       </div>
                     )}
                   </div>
@@ -524,24 +551,28 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Tour Manager</span>
                   <p className="text-white">{booking.tourManager}</p>
+                  {booking.tourManagerPhone && <p><PhoneLink phone={booking.tourManagerPhone} /></p>}
                 </div>
               )}
               {booking.technician && (
                 <div>
                   <span className="text-gray-400">Technicien</span>
                   <p className="text-white">{booking.technician}</p>
+                  {booking.technicianPhone && <p><PhoneLink phone={booking.technicianPhone} /></p>}
                 </div>
               )}
               {booking.artistHandler && (
                 <div>
                   <span className="text-gray-400">Artist Handler</span>
                   <p className="text-white">{booking.artistHandler}</p>
+                  {booking.artistHandlerPhone && <p><PhoneLink phone={booking.artistHandlerPhone} /></p>}
                 </div>
               )}
               {booking.stageManager && (
                 <div>
                   <span className="text-gray-400">Stage Manager</span>
                   <p className="text-white">{booking.stageManager}</p>
+                  {booking.stageManagerPhone && <p><PhoneLink phone={booking.stageManagerPhone} /></p>}
                 </div>
               )}
             </div>
@@ -568,6 +599,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
                 <div>
                   <span className="text-gray-400">Driver:</span>
                   <span className="text-white ml-2">{booking.departureDriver}</span>
+                  {booking.departureDriverPhone && <span className="ml-2"><PhoneLink phone={booking.departureDriverPhone} /></span>}
                 </div>
               )}
               {booking.departureLocation && (
