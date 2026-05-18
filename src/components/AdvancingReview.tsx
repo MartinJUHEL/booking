@@ -225,6 +225,7 @@ function AdvancingReviewPanel({
   onUpdate: () => void;
 }) {
   const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [validatingAll, setValidatingAll] = useState(false);
   const [localForm, setLocalForm] = useState(form);
 
   useEffect(() => {
@@ -263,6 +264,29 @@ function AdvancingReviewPanel({
     }
   }
 
+  async function handleValidateAll() {
+    const pending = localForm.fieldValues.filter(fv => fv.sentAt && !fv.validatedAt && fv.value);
+    if (pending.length === 0) return;
+    setValidatingAll(true);
+    try {
+      const result = await api.put<{ validated: AdvancingFieldValue[]; count: number }>(
+        `/api/bookings/${localForm.bookingId}/advancing/validate-all`
+      );
+      setLocalForm(prev => {
+        const updatedMap = new Map(result.validated.map(v => [v.id, v]));
+        return {
+          ...prev,
+          fieldValues: prev.fieldValues.map(fv => updatedMap.get(fv.id) ?? fv),
+        };
+      });
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingAll(false);
+    }
+  }
+
   const getFieldValue = (section: string, key: string): AdvancingFieldValue | undefined => {
     return localForm.fieldValues.find(fv => fv.section === section && fv.fieldKey === key);
   };
@@ -273,6 +297,7 @@ function AdvancingReviewPanel({
 
   const totalAllFields = SECTIONS.reduce((sum, s) => sum + s.fields.length, 0);
   const validatedFields = localForm.fieldValues.filter(fv => fv.validatedAt).length;
+  const pendingValidation = localForm.fieldValues.filter(fv => fv.sentAt && !fv.validatedAt && fv.value).length;
 
   return (
     <div className="fixed inset-0 z-70 flex justify-end">
@@ -304,6 +329,15 @@ function AdvancingReviewPanel({
               style={{ width: totalAllFields > 0 ? `${(validatedFields / totalAllFields) * 100}%` : "0%" }}
             />
           </div>
+          {pendingValidation > 0 && (
+            <button
+              onClick={handleValidateAll}
+              disabled={validatingAll}
+              className="mt-3 w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+            >
+              {validatingAll ? `Validation en cours...` : `Tout valider (${pendingValidation})`}
+            </button>
+          )}
         </div>
 
         {/* Sections */}

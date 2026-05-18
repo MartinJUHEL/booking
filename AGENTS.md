@@ -284,6 +284,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 
 ### Review Panel (slide-in, `AdvancingReviewPanel`)
 - Progress bar showing validated/total sent fields
+- **"Tout valider" button**: appears when there are pending sent fields, validates all at once via single `PUT /api/bookings/{id}/advancing/validate-all` call
 - Sections as collapsible accordions with per-section progress counters
 - Only shows fields the promoter has **sent** (not drafts)
 - Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking), **✏️ edit button** (inline edit)
