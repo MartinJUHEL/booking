@@ -228,6 +228,66 @@ export default function LoginPage() {
     );
   }
 
+  // Email verification step
+  if (step === "verify") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <h1 className="text-2xl font-bold mb-2">Vérification de l&apos;email</h1>
+          <p className="text-gray-400 mb-6">
+            Un code à 6 chiffres a été envoyé à <span className="text-white font-medium">{verificationEmail}</span>
+          </p>
+
+          <form onSubmit={handleVerify} className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1 text-left">Code de vérification</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                maxLength={6}
+                className="w-full px-3 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-center text-2xl tracking-[0.5em] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="000000"
+                autoFocus
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting || code.length !== 6}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+            >
+              {submitting ? "Vérification..." : "Vérifier"}
+            </button>
+          </form>
+
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={handleResend}
+              disabled={resendCooldown > 0}
+              className="text-sm text-blue-400 hover:text-blue-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0
+                ? `Renvoyer le code (${resendCooldown}s)`
+                : "Renvoyer le code"}
+            </button>
+            <br />
+            <button
+              onClick={() => { setStep("form"); setCode(""); setError(""); }}
+              className="text-sm text-gray-400 hover:text-gray-300"
+            >
+              Retour
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-sm mt-4">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // New password step (shared between Google-only linking and forgot password)
   if (step === "new-password") {
     const strength = getPasswordStrength(newPassword);
