@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, use } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 
 const API_BASE_URL = "";
@@ -121,36 +122,36 @@ const SECTIONS: SectionDef[] = [
   {
     key: "dinner", label: "Dinner", fields: [
       { key: "restaurant", label: "Restaurant", type: "text" },
-      { key: "pickUpTime", label: "Pick-Up Time", type: "time" },
+      { key: "pickUpTime", label: "Pick-Up Time", type: "datetime" },
       { key: "meetingPoint", label: "Meeting Point", type: "text" },
-      { key: "dinnerDriver", label: "Driver", type: "text" },
+      { key: "dinnerDriver", label: "Driver (name + phone)", type: "text" },
     ],
   },
   {
     key: "arrival", label: "Arrival", fields: [
-      { key: "arrivalTime", label: "Arrival time", type: "time" },
+      { key: "arrivalTime", label: "Arrival time", type: "datetime" },
       { key: "arrivalLocation", label: "Arrival location", type: "text" },
       { key: "arrivalMeetingPoint", label: "Meeting Point", type: "text" },
-      { key: "arrivalDriver", label: "Driver", type: "text" },
+      { key: "arrivalDriver", label: "Driver (name + phone)", type: "text" },
       { key: "arrivalDuration", label: "Duration", type: "text" },
     ],
   },
   {
     key: "showTransfers", label: "Show Transfers", fields: [
-      { key: "transferToVenuePickup", label: "Hotel→Venue pick-up time", type: "time" },
+      { key: "transferToVenuePickup", label: "Hotel→Venue pick-up time", type: "datetime" },
       { key: "transferToVenueMeetingPoint", label: "Meeting Point", type: "text" },
-      { key: "transferToVenueDriver", label: "Driver", type: "text" },
+      { key: "transferToVenueDriver", label: "Driver (name + phone)", type: "text" },
       { key: "transferToVenueDuration", label: "Duration", type: "text" },
-      { key: "transferToHotelPickup", label: "Venue→Hotel pick-up time", type: "time" },
+      { key: "transferToHotelPickup", label: "Venue→Hotel pick-up time", type: "datetime" },
       { key: "transferToHotelMeetingPoint", label: "Meeting Point", type: "text" },
-      { key: "transferToHotelDriver", label: "Driver", type: "text" },
+      { key: "transferToHotelDriver", label: "Driver (name + phone)", type: "text" },
     ],
   },
   {
     key: "departure", label: "Departure", fields: [
-      { key: "departurePickup", label: "Pick-up time", type: "time" },
+      { key: "departurePickup", label: "Pick-up time", type: "datetime" },
       { key: "departureMeetingPoint", label: "Meeting Point", type: "text" },
-      { key: "departureDriver", label: "Driver", type: "text" },
+      { key: "departureDriver", label: "Driver (name + phone)", type: "text" },
       { key: "departureLocation", label: "Departure location", type: "text" },
     ],
   },
@@ -164,27 +165,54 @@ const SECTIONS: SectionDef[] = [
 export { SECTIONS };
 export type { AdvancingForm, AdvancingFieldValue, SectionDef, FieldDef };
 
-type Step = "email" | "code" | "form";
-
 export default function AdvancingPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = use(params);
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const searchParams = useSearchParams();
+  const urlToken = searchParams.get("token");
   const [token, setToken] = useState<string | null>(null);
   const [form, setForm] = useState<AdvancingForm | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingField, setSavingField] = useState<string | null>(null);
 
-  // Check if we have a stored token
+  // Authenticate: check stored JWT, or exchange URL token for JWT
   useEffect(() => {
     const stored = localStorage.getItem(`advancing_token_${formId}`);
     if (stored) {
       setToken(stored);
-      setStep("form");
+      return;
     }
-  }, [formId]);
+
+    if (!urlToken) {
+      setError("Invalid or missing link.");
+      setLoading(false);
+      return;
+    }
+
+    // Exchange URL token for JWT
+    async function authenticate() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/advancing/${formId}/auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: urlToken }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setError(err.error || "Invalid or expired link.");
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        localStorage.setItem(`advancing_token_${formId}`, data.token);
+        setToken(data.token);
+      } catch {
+        setError("Authentication failed.");
+        setLoading(false);
+      }
+    }
+    authenticate();
+  }, [formId, urlToken]);
 
   // Load form when token available
   useEffect(() => {
@@ -193,15 +221,21 @@ export default function AdvancingPage({ params }: { params: Promise<{ formId: st
   }, [token]);
 
   async function loadForm() {
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/advancing/${formId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
-        // Token expired, restart
+        // Token expired, try re-auth with URL token
         localStorage.removeItem(`advancing_token_${formId}`);
         setToken(null);
-        setStep("email");
+        if (urlToken) {
+          // Will trigger the auth useEffect again
+          window.location.reload();
+        } else {
+          setError("Session expired. Please use the original link from your email.");
+        }
         return;
       }
       if (!res.ok) {
@@ -213,53 +247,6 @@ export default function AdvancingPage({ params }: { params: Promise<{ formId: st
       setForm(data);
     } catch {
       setError("Failed to load form");
-    }
-  }
-
-  async function handleRequestCode(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/advancing/${formId}/request-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setError(err.error || "An error occurred");
-        return;
-      }
-      setStep("code");
-    } catch {
-      setError("Failed to send code");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/advancing/${formId}/verify-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setError(err.error || "Invalid code");
-        return;
-      }
-      const data = await res.json();
-      localStorage.setItem(`advancing_token_${formId}`, data.token);
-      setToken(data.token);
-      setStep("form");
-    } catch {
-      setError("Verification failed");
     } finally {
       setLoading(false);
     }
@@ -331,83 +318,17 @@ export default function AdvancingPage({ params }: { params: Promise<{ formId: st
     }
   }, [token, formId]);
 
-  // Email step
-  if (step === "email") {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Advancing Form</h1>
-            <p className="text-gray-400">Enter your email to access the form</p>
-          </div>
-          <form onSubmit={handleRequestCode} className="space-y-4">
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500"
-            />
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-colors"
-            >
-              {loading ? "Sending..." : "Send verification code"}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Code step
-  if (step === "code") {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Check your email</h1>
-            <p className="text-gray-400">We sent a 6-digit code to <strong>{email}</strong></p>
-          </div>
-          <form onSubmit={handleVerifyCode} className="space-y-4">
-            <input
-              type="text"
-              value={code}
-              onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="000000"
-              maxLength={6}
-              required
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono focus:outline-none focus:border-purple-500"
-            />
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading || code.length !== 6}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-colors"
-            >
-              {loading ? "Verifying..." : "Verify"}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep("email"); setCode(""); setError(""); }}
-              className="w-full text-gray-400 hover:text-white text-sm transition-colors"
-            >
-              Use a different email
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Form step
+  // Loading or error state
   if (!form) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div className="text-gray-400">{error || "Loading..."}</div>
+        <div className="text-center space-y-2">
+          {error ? (
+            <p className="text-red-400">{error}</p>
+          ) : (
+            <p className="text-gray-400">Loading...</p>
+          )}
+        </div>
       </div>
     );
   }

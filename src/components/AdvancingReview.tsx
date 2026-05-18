@@ -8,6 +8,7 @@ import type { AdvancingForm, AdvancingFieldValue, SectionDef, FieldDef } from "@
 interface AdvancingAccessItem {
   id: string;
   email: string;
+  token: string;
   createdAt: string;
 }
 
@@ -90,8 +91,9 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
     }
   }
 
-  async function handleCopyLink(formId: string) {
-    const url = `${window.location.origin}/advancing/${formId}`;
+  async function handleCopyLink(formId: string, accessToken?: string) {
+    let url = `${window.location.origin}/advancing/${formId}`;
+    if (accessToken) url += `?token=${accessToken}`;
     await navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -159,12 +161,6 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
                   )}
                 </p>
               </div>
-              <button
-                onClick={() => handleCopyLink(formData.id)}
-                className="text-xs text-gray-400 hover:text-white transition-colors"
-              >
-                Copy link
-              </button>
             </div>
 
             {/* Access list */}
@@ -173,12 +169,20 @@ export default function AdvancingReview({ bookingId }: { bookingId: string }) {
                 {formData.accesses.map(a => (
                   <div key={a.id} className="flex items-center justify-between text-xs">
                     <span className="text-gray-300">{a.email}</span>
-                    <button
-                      onClick={() => handleRevokeAccess(a.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Revoke
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopyLink(formData.id, a.token)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        Copy link
+                      </button>
+                      <button
+                        onClick={() => handleRevokeAccess(a.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        Revoke
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -221,6 +225,7 @@ function AdvancingReviewPanel({
   onUpdate: () => void;
 }) {
   const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [validatingAll, setValidatingAll] = useState(false);
   const [localForm, setLocalForm] = useState(form);
 
   useEffect(() => {
@@ -243,6 +248,45 @@ function AdvancingReviewPanel({
     }
    }
 
+  async function handleEdit(fieldValue: AdvancingFieldValue, newValue: string) {
+    setValidatingId(fieldValue.id);
+    try {
+      const updated = await api.put<AdvancingFieldValue>(`/api/advancing/fields/${fieldValue.id}/edit`, { value: newValue });
+      setLocalForm(prev => ({
+        ...prev,
+        fieldValues: prev.fieldValues.map(fv => fv.id === fieldValue.id ? updated : fv),
+      }));
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingId(null);
+    }
+  }
+
+  async function handleValidateAll() {
+    const pending = localForm.fieldValues.filter(fv => fv.sentAt && !fv.validatedAt && fv.value);
+    if (pending.length === 0) return;
+    setValidatingAll(true);
+    try {
+      const result = await api.put<{ validated: AdvancingFieldValue[]; count: number }>(
+        `/api/bookings/${localForm.bookingId}/advancing/validate-all`
+      );
+      setLocalForm(prev => {
+        const updatedMap = new Map(result.validated.map(v => [v.id, v]));
+        return {
+          ...prev,
+          fieldValues: prev.fieldValues.map(fv => updatedMap.get(fv.id) ?? fv),
+        };
+      });
+      onUpdate();
+    } catch {
+      // ignore
+    } finally {
+      setValidatingAll(false);
+    }
+  }
+
   const getFieldValue = (section: string, key: string): AdvancingFieldValue | undefined => {
     return localForm.fieldValues.find(fv => fv.section === section && fv.fieldKey === key);
   };
@@ -253,6 +297,7 @@ function AdvancingReviewPanel({
 
   const totalAllFields = SECTIONS.reduce((sum, s) => sum + s.fields.length, 0);
   const validatedFields = localForm.fieldValues.filter(fv => fv.validatedAt).length;
+  const pendingValidation = localForm.fieldValues.filter(fv => fv.sentAt && !fv.validatedAt && fv.value).length;
 
   return (
     <div className="fixed inset-0 z-70 flex justify-end">
@@ -284,6 +329,15 @@ function AdvancingReviewPanel({
               style={{ width: totalAllFields > 0 ? `${(validatedFields / totalAllFields) * 100}%` : "0%" }}
             />
           </div>
+          {pendingValidation > 0 && (
+            <button
+              onClick={handleValidateAll}
+              disabled={validatingAll}
+              className="mt-3 w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+            >
+              {validatingAll ? `Validation en cours...` : `Tout valider (${pendingValidation})`}
+            </button>
+          )}
         </div>
 
         {/* Sections */}
@@ -295,6 +349,7 @@ function AdvancingReviewPanel({
               getFieldValue={getFieldValue}
               validatingId={validatingId}
               onValidate={handleValidate}
+              onEdit={handleEdit}
             />
           ))}
         </div>
@@ -308,11 +363,13 @@ function ReviewSection({
   getFieldValue,
   validatingId,
   onValidate,
+  onEdit,
 }: {
   section: SectionDef;
   getFieldValue: (section: string, key: string) => AdvancingFieldValue | undefined;
   validatingId: string | null;
   onValidate: (fv: AdvancingFieldValue) => void;
+  onEdit: (fv: AdvancingFieldValue, newValue: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -340,6 +397,7 @@ function ReviewSection({
                 fieldValue={fv}
                 validating={fv ? validatingId === fv.id : false}
                 onValidate={fv ? () => onValidate(fv) : undefined}
+                onEdit={fv ? (newValue: string) => onEdit(fv, newValue) : undefined}
               />
             );
           })}
@@ -376,12 +434,16 @@ function ReviewField({
   fieldValue,
   validating,
   onValidate,
+  onEdit,
 }: {
   field: FieldDef;
   fieldValue: AdvancingFieldValue | undefined;
   validating: boolean;
   onValidate?: () => void;
+  onEdit?: (newValue: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
   const isFilled = fieldValue && fieldValue.value;
   const isValidated = !!fieldValue?.validatedAt;
 
@@ -391,7 +453,24 @@ function ReviewField({
     displayValue = fieldValue.value!;
     if (field.type === "boolean") {
       displayValue = fieldValue.value === "true" ? "Yes" : "No";
+    } else if (field.type === "datetime") {
+      const d = new Date(fieldValue.value!);
+      if (!isNaN(d.getTime())) {
+        displayValue = d.toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      }
     }
+  }
+
+  function startEdit() {
+    setEditValue(fieldValue?.value || "");
+    setEditing(true);
+  }
+
+  function submitEdit() {
+    if (onEdit) {
+      onEdit(editValue);
+    }
+    setEditing(false);
   }
 
   return (
@@ -399,27 +478,80 @@ function ReviewField({
       {/* Label + value */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gray-500">{field.label}</p>
-        <p className={`text-sm break-words ${isFilled ? "text-gray-200" : "text-gray-600 italic"}`}>
-          {isFilled ? displayValue : "Non renseigné"}
-        </p>
+        {editing ? (
+          <div className="flex items-center gap-2 mt-1">
+            {field.type === "textarea" ? (
+              <textarea
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-purple-500"
+                rows={2}
+              />
+            ) : (
+              <input
+                type={field.type === "number" ? "number" : field.type === "time" ? "time" : field.type === "date" ? "date" : field.type === "datetime" ? "datetime-local" : "text"}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-purple-500"
+              />
+            )}
+            <button
+              onClick={submitEdit}
+              disabled={validating}
+              className="text-xs text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 px-2 py-1.5 rounded font-medium transition-colors"
+            >
+              {validating ? "..." : "OK"}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="text-xs text-gray-400 hover:text-white px-2 py-1.5"
+            >
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <p className={`text-sm break-words ${isFilled ? "text-gray-200" : "text-gray-600 italic"}`}>
+            {isFilled ? displayValue : "Non renseigné"}
+          </p>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {isValidated ? (
-          <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
-            Valide
-          </span>
-        ) : isFilled && onValidate ? (
-          <button
-            onClick={onValidate}
-            disabled={validating}
-            className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
-          >
-            {validating ? "..." : "Valider"}
-          </button>
-        ) : null}
-      </div>
+      {!editing && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isValidated ? (
+            <>
+              <span className="text-xs text-green-400 px-3 py-1.5 rounded-lg bg-green-500/10 font-medium">
+                Valide
+              </span>
+              <button
+                onClick={startEdit}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                title="Modifier"
+              >
+                ✏️
+              </button>
+            </>
+          ) : isFilled && onValidate ? (
+            <>
+              <button
+                onClick={onValidate}
+                disabled={validating}
+                className="text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
+              >
+                {validating ? "..." : "Valider"}
+              </button>
+              <button
+                onClick={startEdit}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                title="Modifier"
+              >
+                ✏️
+              </button>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

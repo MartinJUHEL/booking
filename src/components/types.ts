@@ -127,7 +127,26 @@ export interface Booking {
   paymentTerms: string | null;
   contractFileUrl: string | null;
   contractOriginalName: string | null;
-  // Advancing fields
+}
+
+export interface ArtistBooking {
+  id: string;
+  date: string;
+  promoter: string;
+  venue: string;
+  venueAddress: string | null;
+  venueWebsite: string | null;
+  city: string;
+  country: string;
+  fee: number;
+  allInclusive: boolean;
+  status: string;
+  hotel: Hotel;
+  transports: Transport[];
+  notes: string | null;
+  format: string | null;
+  setDuration: number | null;
+  // Advancing fields (feuille de route)
   eventName: string | null;
   eventWebsite: string | null;
   capacity: number | null;
@@ -146,4 +165,23 @@ export interface Booking {
   dinnerMeetingPoint: string | null;
   dinnerDriver: string | null;
   timetable: string | null;
+  // Arrival fields
+  arrivalTime: string | null;
+  arrivalLocation: string | null;
+  arrivalMeetingPoint: string | null;
+  arrivalDriver: string | null;
+  arrivalDuration: string | null;
+  // Show Transfers fields
+  transferToVenuePickup: string | null;
+  transferToVenueMeetingPoint: string | null;
+  transferToVenueDriver: string | null;
+  transferToVenueDuration: string | null;
+  transferToHotelPickup: string | null;
+  transferToHotelMeetingPoint: string | null;
+  transferToHotelDriver: string | null;
+  // Departure fields
+  departurePickup: string | null;
+  departureMeetingPoint: string | null;
+  departureDriver: string | null;
+  departureLocation: string | null;
 }

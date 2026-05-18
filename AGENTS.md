@@ -68,6 +68,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/BookingForm.tsx` | Booking form with venue autocomplete (auto-fills address/city/country), hotel fields, transport legs, ticket upload. Organized in fieldset sections: Venue, Cachet (fee + all inclusive checkbox), Status, Hotel, Transport. **Proposal mode**: when status is "proposal", shows additional fields (Format, Set Duration, Lineup, Ticket Price, Announcement Date, Number of Invitations, Exclusivity, Commission %, Payment Terms) and hides hotel/transport/advancing sections. **Contract section**: for confirmed bookings, upload/download/delete contract (below Notes). |
 | `src/components/BookingTable.tsx` | Booking list table with clickable rows |
 | `src/components/BookingDetail.tsx` | Side panel showing booking details (hotel, transport with ticket download, checklist). For proposals: shows proposal-specific fields and validate/decline actions. Validate opens inline panel with optional contract upload. Contract section: download-only (upload/delete is in BookingForm). |
+| `src/components/ArtistBookingDetail.tsx` | Full-screen artist booking detail page (read-only). Shows event info, timetable (artist's slot highlighted in purple), hotel, transport, notes. "Envoyer par email" button sends feuille de route PDF via API. Sections with no data are hidden. |
+| `src/components/BookerBookingPage.tsx` | Full-screen booker booking detail page with detail/edit toggle. Shows all booking info + "Envoyer feuille de route à l'artiste" button. Edit mode embeds BookingForm inline. Single route `/bookings/[id]`. |
 | `src/components/CalendarView.tsx` | Monthly calendar view (generic, supports custom label via `renderLabel` prop) |
 | `src/components/ArtistSelector.tsx` | Header dropdown for bookers to switch artists (used in artist-specific views) |
 | `src/components/PromoterForm.tsx` | Create/edit promoter modal |
@@ -76,8 +78,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | `src/components/AdvancingReview.tsx` | Advancing management in BookingDetail: send link, list forms, open full review panel with per-field validation |
 | `next.config.ts` | Next.js config with API rewrites proxy to backend |
 | `src/app/advancing/[formId]/page.tsx` | Public advancing form page (magic link auth + multi-section form with auto-save). Also exports `SECTIONS`, `AdvancingForm`, `AdvancingFieldValue` types |
+| `src/app/booking/[id]/page.tsx` | Artist booking detail page (full-screen, read-only). Fetches `ArtistBooking` from `GET /api/bookings/{id}` (artist role returns `ArtistBookingDto`). |
+| `src/app/bookings/[id]/page.tsx` | Booker booking detail page (full-screen, detail/edit toggle). Fetches full `Booking` from `GET /api/bookings/{id}`. |
 | `src/app/invitations/[token]/page.tsx` | Booker invitation accept/reject page (artist clicks email link, authenticates, accepts or rejects) |
-| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, Hotel, Transport, TransportLeg, Promoter). Promoter uses `agencyId` (not `userId`). |
+| `src/components/types.ts` | Shared TypeScript interfaces (BookingListItem, DashboardBookingItem, DashboardResponse, PaginatedResponse, Booking, ArtistBooking, Hotel, Transport, TransportLeg, Promoter, TimetableEntry). Promoter uses `agencyId` (not `userId`). `Booking` is for bookers (full detail), `ArtistBooking` is for artists (read-only, excludes commission/payment terms). |
 
 ## Data Model (TypeScript)
 
@@ -104,7 +108,19 @@ interface BookingListItem {
 ```
 
 ### Booking (full detail, fetched via `GET /api/bookings/{id}`)
-The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`, `contractOriginalName`.
+The full `Booking` interface extends the list fields with: `venueAddress`, `venueWebsite`, `hotel: Hotel`, `transports: Transport[]`, `notes`, `userId`, `user`, `createdAt`, `updatedAt`, `timetable: TimetableEntry[]`, and proposal-specific fields: `format` (`djset`|`live`|null), `setDuration` (minutes), `lineup` (free text), `ticketPrice`, `announcementDate`, `numberOfInvitations`, `exclusivity` (boolean), `commissionPercent`, `paymentTerms`, `contractFileUrl`, `contractOriginalName`.
+
+### ArtistBooking (artist-facing detail, fetched via `GET /api/bookings/{id}` as artist)
+Read-only DTO excluding booker-internal fields (commission, payment terms). Includes: event info, venue, hotel, transports, timetable, notes, promoter name/email/phone.
+
+### TimetableEntry
+```ts
+interface TimetableEntry {
+  artist: string;
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+}
+```
 
 ### DashboardBookingItem (booker dashboard, extends BookingListItem)
 Adds `artistId: string` and `artistName: string` to `BookingListItem`. Fetched via `GET /api/dashboard/bookings?year=`.
@@ -181,6 +197,29 @@ Hotel address autocomplete uses `GET /api/places/search?q=` (backend proxies Goo
 - **Top bar navigation** (booker): Booking | Agence | Promoteurs — each with icon, active tab underlined in purple
 - `/onboarding` page: step 1 = role selection, step 2 = agency creation (bookers without an agency are redirected back here; joining is only via invitation link)
 
+## Booking Detail Pages (Full-Screen)
+
+Both roles have dedicated full-screen detail pages (replacing side panels for navigation from dashboards):
+
+### Artist Detail Page (`/booking/[id]`)
+- **Read-only** — no edit capabilities
+- Shows: event info, timetable (artist's slot highlighted in purple with arrow marker), hotel, transport, notes
+- Sections with no data are hidden entirely
+- "Envoyer par email" button sends the feuille de route PDF to the artist's email via `POST /api/bookings/{id}/send-roadsheet`
+
+### Booker Detail Page (`/bookings/[id]`)
+- **Detail/edit toggle** — single page with "Modifier" button to switch to edit mode (embeds `BookingForm`)
+- Shows all booking info including timetable, advancing status
+- "Envoyer feuille de route à l'artiste" button sends roadsheet PDF to the artist
+- Back button returns to dashboard
+
+### Feuille de Route (Roadsheet)
+- Server-side PDF generated by `RoadsheetPdfService` (QuestPDF)
+- Sent as email attachment via Resend (base64-encoded)
+- Endpoint: `POST /api/bookings/{id}/send-roadsheet`
+- Both artist and booker can trigger it
+- PDF includes: event info, venue, timetable, hotel, transport details
+
 ## Booking List/Detail Pattern
 
 The frontend uses a list/detail split to minimize API payload:
@@ -240,20 +279,20 @@ The advancing feature allows bookers to send a form link to promoters to collect
 ### BookingDetail Integration (`AdvancingReview` component)
 - **Advancing section** in BookingDetail panel (visible only for bookers, `role === "booker"`)
 - **Send Link**: form to enter promoter email → creates form (if first) or adds access → sends invite email + copies link to clipboard
-- **Single form per booking**: shows field counts (sent/validated), list of email accesses with revoke buttons
+- **Single form per booking**: shows field counts (sent/validated), list of email accesses with per-access "Copy link" (includes token) and revoke buttons
 - **"Review Advancing Form" button**: appears when any field has been sent (`sentFields > 0`), opens a full-width slide-in panel for field-by-field validation
 
 ### Review Panel (slide-in, `AdvancingReviewPanel`)
 - Progress bar showing validated/total sent fields
+- **"Tout valider" button**: appears when there are pending sent fields, validates all at once via single `PUT /api/bookings/{id}/advancing/validate-all` call
 - Sections as collapsible accordions with per-section progress counters
 - Only shows fields the promoter has **sent** (not drafts)
-- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking)
-- Validated fields show green "Valide" badge
+- Each sent field shows: label, promoter's value, **"Valider" button** (validate → copies to booking), **✏️ edit button** (inline edit)
+- Validated fields show green "Valide" badge + ✏️ edit button to modify the value after validation (calls `PUT /api/advancing/fields/{id}/edit`)
 
 ### Public Advancing Page (`/advancing/[formId]`)
-- **Step 1**: Email input → request verification code
-- **Step 2**: 6-digit code input → verify → get advancing JWT (stored in `localStorage`)
-- **Step 3**: Multi-section form with accordions, auto-save on blur/change (1500ms debounce, immediate save on blur). Uses `isFocusedRef` to prevent server state from overwriting local input while typing.
+- **Magic link auth**: promoter clicks link with `?token=` param → frontend exchanges token for advancing JWT via `POST /api/advancing/{formId}/auth` → JWT stored in `localStorage` → form loads automatically. No email/code input steps.
+- Multi-section form with accordions, auto-save on blur/change (1500ms debounce, immediate save on blur). Uses `isFocusedRef` to prevent server state from overwriting local input while typing.
 - **Pre-filled fields**: fields already filled by the booker at booking creation appear as validated (green badge, greyed out `opacity-60`, read-only). The promoter cannot modify or re-send them.
 - **Per-field "Send" button**: each non-validated field has a "Send" button next to it. Promoter fills a field (auto-saved as draft) then clicks "Send" to make it visible to the booker
 - **No global "Submit" button** — fields are sent individually
@@ -263,7 +302,7 @@ The advancing feature allows bookers to send a form link to promoters to collect
 - **Hotel autocomplete**: the `hotelName` field uses a `hotel-search` type with autocomplete via `/api/places/search` (Google Places). Selecting a result auto-fills `hotelAddress` via `onAutoFill`
 - Section headers show sent/total counter (e.g. "3/7 sent")
 - Field status indicators: saved (blue, draft), sent (purple, visible to booker), validated (green, confirmed by booker)
-- Token expiry: re-entering email + new code restores access (data persisted server-side)
+- Token expiry: if JWT expires and URL token is present, page reloads to re-authenticate automatically
 - Uses direct `fetch()` with advancing JWT (not `api-client.ts` which uses the main JWT)
 
 ## Promoter Detail Panel
