@@ -374,9 +374,9 @@ export default function BookingDetail({
           <section className="space-y-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Checklist</h3>
             <div className="rounded-xl bg-gray-800/50 border border-gray-800 p-4 space-y-2">
-              <CheckItem label="Contrat signé" checked={booking.contractSigned ?? false} />
-              <CheckItem label="Fees agence payés" checked={booking.agencyFeesPaid ?? false} />
-              <CheckItem label="Fees artiste payés" checked={booking.artistFeesPaid ?? false} />
+              <CheckItem label="Contrat signé" checked={booking.contractSigned} />
+              <CheckItem label="Fees agence payés" checked={booking.agencyFeesPaid} />
+              <CheckItem label="Fees artiste payés" checked={booking.artistFeesPaid} />
             </div>
           </section>
 

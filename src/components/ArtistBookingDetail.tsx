@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import type { Booking, Transport, TransportLeg } from "./types";
+import type { ArtistBooking, Transport, TransportLeg } from "./types";
 
 interface TimetableSlot {
   artist: string;
@@ -122,7 +122,7 @@ function TransportLegCard({ leg }: { leg: TransportLeg }) {
 export default function ArtistBookingDetail({ bookingId }: { bookingId: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [booking, setBooking] = useState<ArtistBooking | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function ArtistBookingDetail({ bookingId }: { bookingId: string }
       router.push("/login");
       return;
     }
-    api.get<Booking>(`/api/bookings/${bookingId}`).then((data) => {
+    api.get<ArtistBooking>(`/api/bookings/${bookingId}`).then((data) => {
       setBooking(data);
       setLoading(false);
     }).catch(() => {
